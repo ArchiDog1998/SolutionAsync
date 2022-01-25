@@ -1,8 +1,10 @@
-﻿using Grasshopper.GUI;
+﻿using Grasshopper;
+using Grasshopper.GUI;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,6 +14,12 @@ namespace SolutionAsync
 {
     public class SolutionAsyncLoad : GH_AssemblyPriority
     {
+        public static bool UseChangeActiveObjectOrder
+        {
+            get => Instances.Settings.GetValue(nameof(UseChangeActiveObjectOrder), true);
+            set => Instances.Settings.SetValue(nameof(UseChangeActiveObjectOrder), value);
+        }
+
         public override GH_LoadingInstruction PriorityLoad()
         {
             Grasshopper.Instances.CanvasCreated += Instances_CanvasCreated;
@@ -48,6 +56,18 @@ namespace SolutionAsync
         {
             GH_DocumentReplacer.Init();
             Grasshopper.Instances.ActiveCanvas.KeyDown += ActiveCanvas_KeyDown;
+
+            ToolStrip _canvasToolbar = editor.Controls[0].Controls[1] as ToolStrip;
+
+            ToolStripSeparator toolStripSeparator = new ToolStripSeparator();
+            toolStripSeparator.Margin = new Padding(2, 0, 2, 0);
+            toolStripSeparator.Size = new Size(6, 40);
+            _canvasToolbar.Items.Add(toolStripSeparator);
+
+            ToolStripButton button = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
+            { Checked = UseChangeActiveObjectOrder, ToolTipText = "Change object's solution order to make Calculate much Faster." };
+            button.Click += (sender, e) => UseChangeActiveObjectOrder = button.Checked = !button.Checked;
+            _canvasToolbar.Items.Add(button);
         }
 
         private void ActiveCanvas_KeyDown(object sender, KeyEventArgs e)

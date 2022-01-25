@@ -24,7 +24,10 @@ namespace SolutionAsync
         internal Task SolveOneLevel()
         {
             return Task.Run(() =>
-            Task.WaitAll(_nodes.Select(no => no.SolveOneObject()).ToArray()));
+            {
+                Task.WaitAll(_nodes.Select(no => no.SolveOneObject()).ToArray());
+                Grasshopper.Instances.ActiveCanvas.ScheduleRegen(1);
+            });
         }
         internal static Calculatelevel[] CrateLevels(List<IGH_ActiveObject> objs, List<Action> indexes, bool Calculate, SortedList<Guid, bool> ignoreList, GH_SolutionMode mode)
         {

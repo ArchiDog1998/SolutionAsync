@@ -100,9 +100,13 @@ namespace SolutionAsync
 				}
 
 				SortedList<Guid, bool> ignoreList = (SortedList<Guid, bool>)_ignoreListInfo.GetValue(this);
-				Calculatelevel[] levels = Calculatelevel.CrateLevels(objList, setIndexList, false, ignoreList, mode);
 
-                foreach (var level in levels)
+				//Get Graph
+				Task<Calculatelevel[]> getLevels = Task<Calculatelevel[]>.Run(() =>
+					Calculatelevel.CrateLevels(objList, setIndexList, SolutionAsyncLoad.UseChangeActiveObjectOrder, ignoreList, mode));
+				Calculatelevel[] levels = getLevels.Result;
+
+				foreach (var level in levels)
                 {
                     if (cancel.IsCancellationRequested)
                     {

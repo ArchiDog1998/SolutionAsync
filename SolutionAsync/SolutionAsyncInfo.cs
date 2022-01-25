@@ -10,10 +10,10 @@ namespace SolutionAsync
         public override string Name => "SolutionAsync";
 
         //Return a 24x24 pixel bitmap to represent this GHA library.
-        public override Bitmap Icon => null;
+        public override Bitmap Icon => Properties.Resources.SolutionAsyncIcon_24;
 
         //Return a short string describing the purpose of this GHA library.
-        public override string Description => "";
+        public override string Description => "Make UI responsible during the solution.";
 
         public override Guid Id => new Guid("FCC6721F-31C1-420F-8B00-E67AEE19DCF1");
 

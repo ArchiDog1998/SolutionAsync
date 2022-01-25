@@ -80,7 +80,7 @@ namespace SolutionAsync
 
         internal void SetNextLevel()
         {
-            int nextLevel = CalculateLevel++;
+            int nextLevel = CalculateLevel + 1;
             foreach (var nextNode in _nextNodes)
             {
                 if(nextNode.CalculateLevel < nextLevel)
