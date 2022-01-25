@@ -7,10 +7,15 @@
     <Description>Description of SolutionAsync</Description>
     <TargetExt>.gha</TargetExt>
     <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="Grasshopper" Version="6.12.19029.6381" IncludeAssets="compile;build" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualBasic" />
   </ItemGroup>
   
   <PropertyGroup Condition="$(Configuration) == 'Debug' AND $([MSBuild]::IsOSPlatform(Windows))">
