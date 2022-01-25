@@ -4,11 +4,20 @@
     <TargetFramework>net48</TargetFramework>
     <Version>0.9.0</Version>
     <Title>SolutionAsync</Title>
-    <Description>Description of SolutionAsync</Description>
+    <Description>Make UI responsible during the solution.</Description>
     <TargetExt>.gha</TargetExt>
     <UseWindowsForms>true</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageIcon>SolutionAsyncIcon_128.png</PackageIcon>
+    <PackageLicenseFile>D:\OneDrive - stu.zafu.edu.cn\Rhino Share Files\07 Grasshopper Developments 蚱蜢开发\# 项目案例\SolutionAsync\LICENSE</PackageLicenseFile>
   </PropertyGroup>
+	
+  <ItemGroup>
+    <None Include="..\SolutionAsyncIcon_128.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
   
   <ItemGroup>
     <PackageReference Include="Grasshopper" Version="6.12.19029.6381" IncludeAssets="compile;build" />
