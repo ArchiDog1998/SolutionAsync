@@ -10,6 +10,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -17,7 +18,8 @@ namespace SolutionAsync
 {
     public class GH_DocumentReplacer
     {
-		private static readonly List<GH_Document> calculatingDoc = new List<GH_Document> ();
+		private static readonly SortedDictionary<GH_Document, CancellationTokenSource> calculatingDocDict = new SortedDictionary<GH_Document, CancellationTokenSource>();
+
 		private static readonly FieldInfo _stateInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("_state")).First();
 		private static readonly FieldInfo _abordInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_abortRequested")).First();
 		private static readonly FieldInfo _solutionIndexInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_solutionIndex")).First();
@@ -65,110 +67,131 @@ namespace SolutionAsync
             return true;
         }
 
-		private static bool FindProcessDocument(out GH_Document doc)
-        {
-			doc = null;
-            foreach (GH_Document document in Instances.DocumentServer)
-            {
-				if(document.SolutionState == GH_ProcessStep.Process && !calculatingDoc.Contains(document))
-                {
-					calculatingDoc.Add(document);
-					doc = document;
-					return true;
-				}
-            }
-			return false;
-        }
 
 		private void SolveAllObjects(GH_SolutionMode mode)
 		{
-			if(!FindProcessDocument(out GH_Document doc))
-            {
-				MessageBox.Show("Solution Async can't find the document!");
+			//MessageBox.Show("Calculating!");
+			GH_Document doc = Instances.ActiveCanvas.Document;
+			CancelDoc(doc, true);
+			calculatingDocDict.Add(doc, SolveAllObjects(doc, mode));
+		}
+
+		internal static void CancelDoc(GH_Document doc, bool clearData)
+        {
+			if (calculatingDocDict.ContainsKey(doc))
+			{
+				calculatingDocDict[doc].Cancel();
+				calculatingDocDict.Remove(doc);
+                //if (clearData)
+                //{
+                //    foreach (IGH_ActiveObject obj in doc.Objects)
+                //    {
+                //        if (obj != null)
+                //        {
+                //            obj.ClearData();
+                //        }
+                //    }
+                //}
             }
+		}
 
-			_solutionIndexInfo.SetValue(doc, -1);
-			List<IGH_ActiveObject> list = new List<IGH_ActiveObject>(doc.ObjectCount);
-			List<int> list2 = new List<int>(doc.ObjectCount);
-			int num = doc.ObjectCount - 1;
-			for (int i = 0; i <= num; i++)
-			{
-				IGH_ActiveObject iGH_ActiveObject = doc.Objects[i] as IGH_ActiveObject;
-				if (iGH_ActiveObject != null)
+		private CancellationTokenSource SolveAllObjects(GH_Document doc, GH_SolutionMode mode)
+        {
+			CancellationTokenSource cancel = new CancellationTokenSource();
+			Task.Run(async () =>
+            {
+				_solutionIndexInfo.SetValue(doc, -1);
+				List<IGH_ActiveObject> objList = new List<IGH_ActiveObject>(doc.ObjectCount);
+				List<int> indexList = new List<int>(doc.ObjectCount);
+				for (int i = 0; i < doc.ObjectCount; i++)
 				{
-					list.Add(iGH_ActiveObject);
-					list2.Add(i);
-				}
-			}
-
-			SortedList<Guid, bool> ignoreList = (SortedList<Guid, bool>)_ignoreListInfo.GetValue(this);
-			for (int j = 0; j < list.Count; j++)
-			{
-				if (GH_Document.IsEscapeKeyDown())
-				{
-					_abordInfo.SetValue(this, true);
-				}
-				if (doc.AbortRequested)
-				{
-					break;
-				}
-				_solutionIndexInfo.SetValue(doc, list2[j]);
-
-				IGH_ActiveObject iGH_ActiveObject2 = list[j];
-				try
-				{
-					if (iGH_ActiveObject2.Phase == GH_SolutionPhase.Computed)
+					IGH_ActiveObject iGH_ActiveObject = doc.Objects[i] as IGH_ActiveObject;
+					if (iGH_ActiveObject != null)
 					{
-						continue;
+						objList.Add(iGH_ActiveObject);
+						indexList.Add(i);
 					}
-					iGH_ActiveObject2.CollectData();
-					iGH_ActiveObject2.ComputeData();
-					goto IL_0233;
 				}
-				catch (Exception ex)
+				SortedList<Guid, bool> ignoreList = (SortedList<Guid, bool>)_ignoreListInfo.GetValue(this);
+
+				for (int j = 0; j < objList.Count; j++)
 				{
-					ProjectData.SetProjectError(ex);
-					Exception ex2 = ex;
-					iGH_ActiveObject2.Phase = GH_SolutionPhase.Failed;
-					iGH_ActiveObject2.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex2.Message);
-					HostUtils.ExceptionReport(ex2);
-                    if (mode == GH_SolutionMode.Default && !RhinoApp.IsRunningHeadless && !ignoreList.ContainsKey(iGH_ActiveObject2.InstanceGuid))
-                    {
-                        GH_ObjectExceptionDialog gH_ObjectExceptionDialog = new GH_ObjectExceptionDialog();
+					//if (GH_Document.IsEscapeKeyDown())
+					//{
+					//	_abordInfo.SetValue(this, true);
+					//}
+					if (doc.AbortRequested)
+					{
+						break;
+					}
+					_solutionIndexInfo.SetValue(doc, indexList[j]);
 
-						((Label)_iconInfo.GetValue(gH_ObjectExceptionDialog)).Image = iGH_ActiveObject2.Icon_24x24;
-						((Label)_nameInfo.GetValue(gH_ObjectExceptionDialog)).Text = $"{iGH_ActiveObject2.Name} [{iGH_ActiveObject2.NickName}]";
-						((Label)_exceptionInfo.GetValue(gH_ObjectExceptionDialog)).Text = "An exception was thrown during a solution:" + Environment.NewLine + $"Component: {iGH_ActiveObject2.Name}" + Environment.NewLine + $"c_UUID: {iGH_ActiveObject2.InstanceGuid}" + Environment.NewLine + $"c_POS: {iGH_ActiveObject2.Attributes.Pivot}" + Environment.NewLine + Environment.NewLine + ex2.Message;
+					IGH_ActiveObject calculateObj = objList[j];
+					try
+					{
+						if (calculateObj.Phase == GH_SolutionPhase.Computed)
+						{
+							continue;
+						}
+						await SolveOneObject(calculateObj);
+						goto IL_0233;
+					}
+					catch (Exception ex)
+					{
+						ProjectData.SetProjectError(ex);
+						Exception ex2 = ex;
+						calculateObj.Phase = GH_SolutionPhase.Failed;
+						calculateObj.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex2.Message);
+						HostUtils.ExceptionReport(ex2);
+						if (mode == GH_SolutionMode.Default && !RhinoApp.IsRunningHeadless && !ignoreList.ContainsKey(calculateObj.InstanceGuid))
+						{
+							GH_ObjectExceptionDialog gH_ObjectExceptionDialog = new GH_ObjectExceptionDialog();
 
-                        GH_WindowsFormUtil.CenterFormOnEditor((Form)gH_ObjectExceptionDialog, limitToScreen: true);
-                        gH_ObjectExceptionDialog.ShowDialog(Instances.DocumentEditor);
-                        if (((CheckBox)_dontShotInfo.GetValue( gH_ObjectExceptionDialog)).Checked)
-                        {
-							ignoreList.Add(iGH_ActiveObject2.InstanceGuid, value: true);
-                        }
-                    }
-                    ProjectData.ClearProjectError();
-					goto IL_0233;
-				}
+							((Label)_iconInfo.GetValue(gH_ObjectExceptionDialog)).Image = calculateObj.Icon_24x24;
+							((Label)_nameInfo.GetValue(gH_ObjectExceptionDialog)).Text = $"{calculateObj.Name} [{calculateObj.NickName}]";
+							((Label)_exceptionInfo.GetValue(gH_ObjectExceptionDialog)).Text = "An exception was thrown during a solution:" + Environment.NewLine + $"Component: {calculateObj.Name}" + Environment.NewLine + $"c_UUID: {calculateObj.InstanceGuid}" + Environment.NewLine + $"c_POS: {calculateObj.Attributes.Pivot}" + Environment.NewLine + Environment.NewLine + ex2.Message;
+
+							GH_WindowsFormUtil.CenterFormOnEditor((Form)gH_ObjectExceptionDialog, limitToScreen: true);
+							gH_ObjectExceptionDialog.ShowDialog(Instances.DocumentEditor);
+							if (((CheckBox)_dontShotInfo.GetValue(gH_ObjectExceptionDialog)).Checked)
+							{
+								ignoreList.Add(calculateObj.InstanceGuid, value: true);
+							}
+						}
+						ProjectData.ClearProjectError();
+						goto IL_0233;
+					}
 				IL_0233:
-				iGH_ActiveObject2.Attributes.ExpireLayout();
+					calculateObj.Attributes.ExpireLayout();
+					if (doc.AbortRequested)
+					{
+						break;
+					}
+				}
 				if (doc.AbortRequested)
 				{
-					break;
+					_stateInfo.SetValue(doc, GH_ProcessStep.Aborted);
 				}
-			}
-			if (doc.AbortRequested)
-			{
-				_stateInfo.SetValue(doc, GH_ProcessStep.Aborted);
-			}
-			else
-			{
-				_stateInfo.SetValue(doc, GH_ProcessStep.PostProcess);
-			}
+				else
+				{
+					_stateInfo.SetValue(doc, GH_ProcessStep.PostProcess);
+				}
 
-			calculatingDoc.Remove(doc);
+				calculatingDocDict.Remove(doc);
 
-			MessageBox.Show("Calculated from Solution Async!");
+			}, cancel.Token);
+
+			return cancel;
+        }
+
+		private static Task SolveOneObject(IGH_ActiveObject actObj)
+        {
+			return Task.Run(() =>
+			{
+				actObj.CollectData();
+				actObj.ComputeData();
+				Instances.ActiveCanvas.ScheduleRegen(1);
+			});
 		}
 	}
 }

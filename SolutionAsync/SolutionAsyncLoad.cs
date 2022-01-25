@@ -47,6 +47,16 @@ namespace SolutionAsync
         private void DoingSomethingFirst(GH_DocumentEditor editor)
         {
             GH_DocumentReplacer.Init();
+            Grasshopper.Instances.ActiveCanvas.KeyDown += ActiveCanvas_KeyDown;
+        }
+
+        private void ActiveCanvas_KeyDown(object sender, KeyEventArgs e)
+        {
+            if(e.KeyCode == Keys.Escape)
+            {
+                GH_DocumentReplacer.CancelDoc(Grasshopper.Instances.ActiveCanvas.Document, false);
+                MessageBox.Show("Cancel!");
+            }
         }
     }
 }
