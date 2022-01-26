@@ -17,8 +17,11 @@ namespace SolutionAsync
 {
     internal class GraphNode
     {
-        public IGH_ActiveObject ActiveObject { get; set; }
+        public IGH_ActiveObject ActiveObject { get; }
         private Action _setIndex;
+        /// <summary>
+        /// -1 means it is not the first node.
+        /// </summary>
         public int CalculateLevel { get; set; } = 0;
 
         private SortedList<Guid, bool> _ignoreList;
@@ -73,6 +76,7 @@ namespace SolutionAsync
             {
                 if(node != null && objects.Contains(node.ActiveObject))
                 {
+                    node.CalculateLevel = -1;
                     _nextNodes.Add(node);
                 }
             }

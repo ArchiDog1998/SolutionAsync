@@ -46,7 +46,8 @@ namespace SolutionAsync
 
                 foreach (var node in nodes)
                 {
-                    node.SetNextLevel();
+                    if (node.CalculateLevel == 0)
+                        node.SetNextLevel();
                 }
 
                 List<Calculatelevel> result = new List<Calculatelevel>();
