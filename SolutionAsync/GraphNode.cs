@@ -118,18 +118,21 @@ namespace SolutionAsync
                     HostUtils.ExceptionReport(ex2);
                     if (_mode == GH_SolutionMode.Default && !RhinoApp.IsRunningHeadless && !_ignoreList.ContainsKey(ActiveObject.InstanceGuid))
                     {
-                        GH_ObjectExceptionDialog gH_ObjectExceptionDialog = new GH_ObjectExceptionDialog();
-
-                        ((Label)_iconInfo.GetValue(gH_ObjectExceptionDialog)).Image = ActiveObject.Icon_24x24;
-                        ((Label)_nameInfo.GetValue(gH_ObjectExceptionDialog)).Text = $"{ActiveObject.Name} [{ActiveObject.NickName}]";
-                        ((Label)_exceptionInfo.GetValue(gH_ObjectExceptionDialog)).Text = "An exception was thrown during a solution:" + Environment.NewLine + $"Component: {ActiveObject.Name}" + Environment.NewLine + $"c_UUID: {ActiveObject.InstanceGuid}" + Environment.NewLine + $"c_POS: {ActiveObject.Attributes.Pivot}" + Environment.NewLine + Environment.NewLine + ex2.Message;
-
-                        GH_WindowsFormUtil.CenterFormOnEditor((Form)gH_ObjectExceptionDialog, limitToScreen: true);
-                        gH_ObjectExceptionDialog.ShowDialog(Instances.DocumentEditor);
-                        if (((CheckBox)_dontShotInfo.GetValue(gH_ObjectExceptionDialog)).Checked)
+                        Grasshopper.Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
                         {
-                            _ignoreList.Add(ActiveObject.InstanceGuid, value: true);
-                        }
+                            GH_ObjectExceptionDialog gH_ObjectExceptionDialog = new GH_ObjectExceptionDialog();
+
+                            ((Label)_iconInfo.GetValue(gH_ObjectExceptionDialog)).Image = ActiveObject.Icon_24x24;
+                            ((Label)_nameInfo.GetValue(gH_ObjectExceptionDialog)).Text = $"{ActiveObject.Name} [{ActiveObject.NickName}]";
+                            ((Label)_exceptionInfo.GetValue(gH_ObjectExceptionDialog)).Text = "An exception was thrown during a solution:" + Environment.NewLine + $"Component: {ActiveObject.Name}" + Environment.NewLine + $"c_UUID: {ActiveObject.InstanceGuid}" + Environment.NewLine + $"c_POS: {ActiveObject.Attributes.Pivot}" + Environment.NewLine + Environment.NewLine + ex2.Message;
+
+                            GH_WindowsFormUtil.CenterFormOnEditor((Form)gH_ObjectExceptionDialog, limitToScreen: true);
+                            gH_ObjectExceptionDialog.ShowDialog(Instances.DocumentEditor);
+                            if (((CheckBox)_dontShotInfo.GetValue(gH_ObjectExceptionDialog)).Checked)
+                            {
+                                _ignoreList.Add(ActiveObject.InstanceGuid, value: true);
+                            }
+                        });
                     }
                     ProjectData.ClearProjectError();
                 }

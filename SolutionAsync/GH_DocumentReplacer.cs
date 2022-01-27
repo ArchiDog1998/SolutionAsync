@@ -1,7 +1,6 @@
 ﻿using Grasshopper;
 using Grasshopper.GUI;
 using Grasshopper.Kernel;
-using Microsoft.VisualBasic.CompilerServices;
 using Rhino;
 using Rhino.Runtime;
 using System;
@@ -18,18 +17,12 @@ namespace SolutionAsync
 {
     public class GH_DocumentReplacer
     {
-		private static readonly SortedDictionary<GH_Document, CancellationTokenSource> calculatingDocDict = new SortedDictionary<GH_Document, CancellationTokenSource>();
-
-		private static readonly FieldInfo _stateInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("_state")).First();
-		private static readonly FieldInfo _abordInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_abortRequested")).First();
-		private static readonly FieldInfo _solutionIndexInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_solutionIndex")).First();
-		private static readonly FieldInfo _ignoreListInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_ignoreList")).First();
+		private static readonly List<DocumentTask> _documentTasks = new List<DocumentTask>();
 
 		internal static void Init()
         {
-			ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(SolveAllObjects))).First(),
+			ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(NewSolution))).First(),
 				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("SolveAllObjects")).First());
-
 		}
 
 		internal static bool ExchangeMethod(MethodInfo targetMethod, MethodInfo injectMethod)
@@ -62,83 +55,24 @@ namespace SolutionAsync
             return true;
         }
 
-
-		private void SolveAllObjects(GH_SolutionMode mode)
-		{
-			//MessageBox.Show("Calculating!");
-			GH_Document doc = Instances.ActiveCanvas.Document;
-			CancelDoc(doc, true);
-			calculatingDocDict.Add(doc, SolveAllObjects(doc, mode));
-		}
-
-		internal static void CancelDoc(GH_Document doc, bool clearData)
+        private async void NewSolution(GH_SolutionMode mode)
         {
-			if (calculatingDocDict.ContainsKey(doc))
-			{
-				CancellationTokenSource cancel = calculatingDocDict[doc];
-				calculatingDocDict.Remove(doc);
-				cancel.Cancel();
-            }
-		}
+            await FindTask(Instances.ActiveCanvas.Document).Compute(mode);
+        }
 
-		private CancellationTokenSource SolveAllObjects(GH_Document doc, GH_SolutionMode mode)
+        private static DocumentTask FindTask(GH_Document doc)
         {
-			CancellationTokenSource cancel = new CancellationTokenSource();
-			Task.Run(async () =>
+            foreach (var task in _documentTasks)
             {
-				_solutionIndexInfo.SetValue(doc, -1);
-				List<IGH_ActiveObject> objList = new List<IGH_ActiveObject>(doc.ObjectCount);
-				List<Action> setIndexList = new List<Action>(doc.ObjectCount);
-				for (int i = 0; i < doc.ObjectCount; i++)
-				{
-					IGH_ActiveObject iGH_ActiveObject = doc.Objects[i] as IGH_ActiveObject;
-					if (iGH_ActiveObject != null)
-					{
-						objList.Add(iGH_ActiveObject);
-						setIndexList.Add(() => _solutionIndexInfo.SetValue(doc, i));
-					}
-				}
-
-				SortedList<Guid, bool> ignoreList = (SortedList<Guid, bool>)_ignoreListInfo.GetValue(this);
-
-				//Get Graph
-				Task<Calculatelevel[]> getLevels = Task<Calculatelevel[]>.Run(() =>
-					Calculatelevel.CrateLevels(objList, setIndexList, SolutionAsyncLoad.UseChangeActiveObjectOrder, ignoreList, mode));
-				Calculatelevel[] levels = getLevels.Result;
-
-				foreach (var level in levels)
+                if(task.Document == doc)
                 {
-                    if (cancel.IsCancellationRequested)
-                    {
-                        _abordInfo.SetValue(this, true);
-                    }
-                    if (doc.AbortRequested)
-					{
-                        if (calculatingDocDict.ContainsKey(doc))
-                        {
-							_abordInfo.SetValue(this, false);
-						}
-						break;
-					}
-
-					await level.SolveOneLevel();
-
+                    return task;
                 }
+            }
 
-				if (doc.AbortRequested)
-				{
-					_stateInfo.SetValue(doc, GH_ProcessStep.Aborted);
-				}
-				else
-				{
-					_stateInfo.SetValue(doc, GH_ProcessStep.PostProcess);
-				}
-
-				calculatingDocDict.Remove(doc);
-
-			}, cancel.Token);
-
-			return cancel;
+            DocumentTask newTask = new DocumentTask(doc);
+            _documentTasks.Add(newTask);
+            return newTask;
         }
 	}
 }

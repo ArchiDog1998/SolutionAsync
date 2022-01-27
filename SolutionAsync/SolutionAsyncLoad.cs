@@ -74,7 +74,7 @@ namespace SolutionAsync
         {
             if(e.KeyCode == Keys.Escape)
             {
-                GH_DocumentReplacer.CancelDoc(Grasshopper.Instances.ActiveCanvas.Document, false);
+                //GH_DocumentReplacer.CancelDoc(Grasshopper.Instances.ActiveCanvas.Document, false);
             }
         }
     }
