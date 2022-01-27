@@ -17,102 +17,39 @@ namespace SolutionAsync
     internal class DocumentTask
     {
         #region SolveAllObjects Field
-        private static readonly FieldInfo _stateInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("_state")).First();
-		private static readonly FieldInfo _abordInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_abortRequested")).First();
-		private static readonly FieldInfo _solutionIndexInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_solutionIndex")).First();
-		private static readonly FieldInfo _ignoreListInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_ignoreList")).First();
+        internal static readonly FieldInfo _stateInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("_state")).First();
+		internal static readonly FieldInfo _abordInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_abortRequested")).First();
+		internal static readonly FieldInfo _solutionIndexInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_solutionIndex")).First();
+		internal static readonly FieldInfo _ignoreListInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_ignoreList")).First();
         #endregion
 
-        //private static readonly FieldInfo _disposeInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_disposed")).First();
-        //private static readonly MethodInfo _solutionSetupInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionSetup")).First();
-        //private static readonly MethodInfo _solutionProfilerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiler")).First();
-        //private static readonly MethodInfo _scheduleCallDelegatesInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("ScheduleCallDelegates")).First();
-        //private static readonly MethodInfo _solutionStartInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionStart")).First();
-        //private static readonly MethodInfo _solutionExpireAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionExpireAll")).First();
-        //private static readonly MethodInfo _solutionBeginUndoAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionBeginUndo")).First();
-        //private static readonly MethodInfo _solutionEndUndoInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionEndUndo")).First();
-        //private static readonly MethodInfo _solutionProfiledInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiled")).First();
-        //private static readonly MethodInfo _solutionCleanUpInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCleanup")).First();
-        //private static readonly MethodInfo _solutionEndInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionEnd")).First();
-        //private static readonly MethodInfo _solutionCompletionMessagingInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCompletionMessaging")).First();
-        //private static readonly MethodInfo _solutionTriggerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionTriggerSchedules")).First();
-
         public GH_Document Document { get; }
-        public bool IsESCAbort { private get; set; } = true;
+
         private bool _abort = false;
-        private Task _calculatingTask = Task.CompletedTask;
+        private bool _isCalculating = false;
         public DocumentTask(GH_Document doc)
         {
             Document = doc;
         }
-        public async Task Compute(GH_SolutionMode mode)
+        internal async Task Compute(GH_SolutionMode mode)
         {
-            //_abort = true;
-            //Task.WaitAll(_calculatingTask);
-            //_abort = false;
-            _calculatingTask = SolveAllObjects(mode);
-            await _calculatingTask;
+            if (_isCalculating)
+            {
+                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" is Calculating, Solution Async can't calculate it again.",
+                    GH_RuntimeMessageLevel.Warning));
+                return;
+            }
+
+            _abort = false;
+            _isCalculating = true;
+            await SolveAllObjects(mode);
+            _isCalculating = false;
         }
 
-        //private async Task MyNewSolution(bool expireAllObjects, GH_SolutionMode mode)
-        //{
-        //    if ((bool)_disposeInfo.GetValue(Document))
-        //    {
-        //        return;
-        //    }
-        //    if (!GH_Document.EnableSolutions)
-        //    {
-        //        Instances.InvalidateCanvas();
-        //        return;
-        //    }
-        //    _solutionSetupInfo.Invoke(Document, new object[] { });
-        //    DateTime now = DateTime.Now;
-        //    Stopwatch profiler = (Stopwatch)_solutionProfilerInfo.Invoke(Document, new object[] { });
-        //    _scheduleCallDelegatesInfo.Invoke(Document, new object[] { });
-        //    _solutionStartInfo.Invoke(Document, new object[] { });
-        //    if (Document.Enabled && Document.SolutionState != GH_ProcessStep.Process)
-        //    {
-        //        _stateInfo.SetValue(Document, GH_ProcessStep.PreProcess);
-        //        if (expireAllObjects)
-        //        {
-        //            _solutionExpireAllInfo.Invoke(Document, new object[] { });
-        //        }
-        //        uint id = (uint)_solutionBeginUndoAllInfo.Invoke(Document, new object[] { });
-        //        _stateInfo.SetValue(Document, GH_ProcessStep.Process);
-        //        try
-        //        {
-        //            await SolveAllObjects(mode);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            ProjectData.SetProjectError(ex);
-        //            Exception ex2 = ex;
-        //            switch (mode)
-        //            {
-        //                case GH_SolutionMode.Default:
-        //                    Tracing.Assert(new Guid("{D56F3CBE-219D-4311-8B4B-C61140D441E3}"), "An unhandled solution exception was caught.", ex2);
-        //                    break;
-        //                case GH_SolutionMode.CommandLine:
-        //                    RhinoApp.WriteLine("An unhandled solution exception was caught.:");
-        //                    while (ex2 != null)
-        //                    {
-        //                        RhinoApp.WriteLine("  " + ex2.Message);
-        //                        ex2 = ex2.InnerException;
-        //                    }
-        //                    break;
-        //            }
-        //            ProjectData.ClearProjectError();
-        //        }
-        //        _solutionEndUndoInfo.Invoke(Document, new object[] { id });
-        //        _solutionProfiledInfo.Invoke(Document, new object[] { now, profiler });
-        //    }
-        //    _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
-
-        //    _solutionCleanUpInfo.Invoke(Document, new object[] { });
-        //    _solutionEndInfo.Invoke(Document, new object[] { now });
-        //    _solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
-        //    _solutionTriggerInfo.Invoke(Document, new object[] { mode });
-        //}
+        internal void AbortCompute()
+        {
+            _abort = true;
+        }
 
         private async Task SolveAllObjects(GH_SolutionMode mode)
         {
@@ -133,7 +70,7 @@ namespace SolutionAsync
 
             //Get Graph
             Task<Calculatelevel[]> getLevels = Task<Calculatelevel[]>.Run(() =>
-                Calculatelevel.CrateLevels(objList, setIndexList, SolutionAsyncLoad.UseChangeActiveObjectOrder, ignoreList, mode));
+                Calculatelevel.CrateLevels(objList, setIndexList, SolutionAsyncLoad.UseSolutionOrderedLevelAsync, ignoreList, mode));
             Calculatelevel[] levels = getLevels.Result;
 
             foreach (var level in levels)
@@ -144,10 +81,6 @@ namespace SolutionAsync
                 }
                 if (Document.AbortRequested)
                 {
-                    //if (calculatingDocDict.ContainsKey(Document))
-                    //{
-                    //	_abordInfo.SetValue(Document, false);
-                    //}
                     break;
                 }
 

@@ -14,10 +14,15 @@ namespace SolutionAsync
 {
     public class SolutionAsyncLoad : GH_AssemblyPriority
     {
-        public static bool UseChangeActiveObjectOrder
+        public static bool UseSolutionAsync
         {
-            get => Instances.Settings.GetValue(nameof(UseChangeActiveObjectOrder), true);
-            set => Instances.Settings.SetValue(nameof(UseChangeActiveObjectOrder), value);
+            get => Instances.Settings.GetValue(nameof(UseSolutionAsync), true);
+            set => Instances.Settings.SetValue(nameof(UseSolutionAsync), value);
+        }
+        public static bool UseSolutionOrderedLevelAsync
+        {
+            get => Instances.Settings.GetValue(nameof(UseSolutionOrderedLevelAsync), true);
+            set => Instances.Settings.SetValue(nameof(UseSolutionOrderedLevelAsync), value);
         }
 
         public override GH_LoadingInstruction PriorityLoad()
@@ -54,8 +59,8 @@ namespace SolutionAsync
 
         private void DoingSomethingFirst(GH_DocumentEditor editor)
         {
-            GH_DocumentReplacer.Init();
-            Grasshopper.Instances.ActiveCanvas.KeyDown += ActiveCanvas_KeyDown;
+            GH_DocumentReplacer.ChangeFunction();
+            Instances.ActiveCanvas.KeyDown += ActiveCanvas_KeyDown;
 
             ToolStrip _canvasToolbar = editor.Controls[0].Controls[1] as ToolStrip;
 
@@ -65,8 +70,11 @@ namespace SolutionAsync
             _canvasToolbar.Items.Add(toolStripSeparator);
 
             ToolStripButton button = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
-            { Checked = UseChangeActiveObjectOrder, ToolTipText = "Change object's solution order to make Calculate much Faster." };
-            button.Click += (sender, e) => UseChangeActiveObjectOrder = button.Checked = !button.Checked;
+            { Checked = UseSolutionAsync, ToolTipText = "Change object's solution order to make Calculate much Faster." };
+            button.Click += (sender, e) =>
+            {
+                UseSolutionAsync = button.Checked = !button.Checked;
+            };
             _canvasToolbar.Items.Add(button);
         }
 
@@ -74,7 +82,7 @@ namespace SolutionAsync
         {
             if(e.KeyCode == Keys.Escape)
             {
-                //GH_DocumentReplacer.CancelDoc(Grasshopper.Instances.ActiveCanvas.Document, false);
+                GH_DocumentReplacer.CancelDocument(Instances.ActiveCanvas.Document);
             }
         }
     }
