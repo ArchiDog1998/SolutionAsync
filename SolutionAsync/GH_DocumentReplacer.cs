@@ -165,7 +165,8 @@ namespace SolutionAsync
                 if (task.Document == document)
                 {
                     task.AbortCompute();
-                }
+					return;
+				}
             }
         }
 	}

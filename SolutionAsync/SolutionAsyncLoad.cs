@@ -69,13 +69,26 @@ namespace SolutionAsync
             toolStripSeparator.Size = new Size(6, 40);
             _canvasToolbar.Items.Add(toolStripSeparator);
 
-            ToolStripButton button = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
-            { Checked = UseSolutionAsync, ToolTipText = "Change object's solution order to make Calculate much Faster." };
-            button.Click += (sender, e) =>
+            ToolStripButton useButton = new ToolStripButton(Properties.Resources.UseChangeLevelIcon_24)
             {
-                UseSolutionAsync = button.Checked = !button.Checked;
+                Checked = UseSolutionOrderedLevelAsync,
+                Enabled = UseSolutionAsync,
+                ToolTipText = "Change object's solution order to make Calculate much Faster.",
             };
-            _canvasToolbar.Items.Add(button);
+            useButton.Click += (sender, e) =>
+            {
+                UseSolutionOrderedLevelAsync = useButton.Checked = !useButton.Checked;
+            };
+
+            ToolStripButton openButton = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
+            { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use Solution Async." };
+            openButton.Click += (sender, e) =>
+            {
+                UseSolutionAsync = useButton.Enabled = openButton.Checked = !openButton.Checked;
+            };
+
+            _canvasToolbar.Items.Add(openButton);
+            _canvasToolbar.Items.Add(useButton);
         }
 
         private void ActiveCanvas_KeyDown(object sender, KeyEventArgs e)

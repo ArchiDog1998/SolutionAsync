@@ -49,6 +49,8 @@ namespace SolutionAsync
         internal void AbortCompute()
         {
             _abort = true;
+            Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" received Cancel solution Command.",
+                GH_RuntimeMessageLevel.Remark));
         }
 
         private async Task SolveAllObjects(GH_SolutionMode mode)
@@ -78,6 +80,9 @@ namespace SolutionAsync
                 if (_abort)
                 {
                     _abordInfo.SetValue(Document, true);
+                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have aborted the solution.",
+                        GH_RuntimeMessageLevel.Remark));
+
                 }
                 if (Document.AbortRequested)
                 {
@@ -96,7 +101,6 @@ namespace SolutionAsync
             {
                 _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
             }
-
         }
     }
 }

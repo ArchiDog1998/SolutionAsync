@@ -121,4 +121,7 @@
   <data name="SolutionAsyncIcon_24" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\SolutionAsyncIcon_24.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="UseChangeLevelIcon_24" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\UseChangeLevelIcon_24.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
 </root>
