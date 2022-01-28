@@ -81,7 +81,7 @@ namespace SolutionAsync
             };
 
             ToolStripButton openButton = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
-            { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use Solution Async." };
+            { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use Solution Async.\nNOTE: Please UNABLE Solution Async if you are using plugins that need to do some solution events, such as Kangaroo or Anemone." };
             openButton.Click += (sender, e) =>
             {
                 UseSolutionAsync = useButton.Enabled = openButton.Checked = !openButton.Checked;

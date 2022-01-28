@@ -27,6 +27,8 @@ namespace SolutionAsync
 
         private bool _abort = false;
         private bool _isCalculating = false;
+        private bool _isNotFirst = false;
+
         public DocumentTask(GH_Document doc)
         {
             Document = doc;
@@ -35,8 +37,12 @@ namespace SolutionAsync
         {
             if (_isCalculating)
             {
-                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" is Calculating, Solution Async can't calculate it again.",
-                    GH_RuntimeMessageLevel.Warning));
+                if (_isNotFirst)
+                {
+                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" is calculating, Solution Async can't calculate it again. If this causes the unexpective result, please UNABLE Solution Async.",
+                        GH_RuntimeMessageLevel.Warning));
+                }
+                _isNotFirst = true;
                 return;
             }
 
@@ -55,6 +61,9 @@ namespace SolutionAsync
 
         private async Task SolveAllObjects(GH_SolutionMode mode)
         {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             _solutionIndexInfo.SetValue(Document, -1);
             List<IGH_ActiveObject> objList = new List<IGH_ActiveObject>(Document.ObjectCount);
             List<Action> setIndexList = new List<Action>(Document.ObjectCount);
@@ -80,9 +89,6 @@ namespace SolutionAsync
                 if (_abort)
                 {
                     _abordInfo.SetValue(Document, true);
-                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have aborted the solution.",
-                        GH_RuntimeMessageLevel.Remark));
-
                 }
                 if (Document.AbortRequested)
                 {
@@ -90,16 +96,25 @@ namespace SolutionAsync
                 }
 
                 await level.SolveOneLevel();
-
             }
+
+            stopwatch.Stop();
+            string span = stopwatch.Elapsed.ToString("dd\\.hh\\:mm\\:ss");
+
+            Rhino.RhinoDoc.ActiveDoc.Views.Redraw();
 
             if (Document.AbortRequested)
             {
                 _stateInfo.SetValue(Document, GH_ProcessStep.Aborted);
+                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have aborted the solution.    Time: " + span,
+                    GH_RuntimeMessageLevel.Remark));
             }
             else
             {
                 _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have calcualted successfully.   Time: " + span,
+                    GH_RuntimeMessageLevel.Remark));
+
             }
         }
     }

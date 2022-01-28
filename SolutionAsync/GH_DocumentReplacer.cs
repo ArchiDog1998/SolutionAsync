@@ -13,13 +13,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace SolutionAsync
 {
     public class GH_DocumentReplacer
     {
 		private static readonly List<DocumentTask> _documentTasks = new List<DocumentTask>();
-
 		internal static void ChangeFunction()
         {
 			ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(SolveAllObjects))).First(),
@@ -64,6 +64,9 @@ namespace SolutionAsync
                 await FindTask(Document).Compute(mode);
             else
             {
+				Stopwatch stopwatch = new Stopwatch();
+				stopwatch.Start();
+
 				DocumentTask._solutionIndexInfo.SetValue(Document, -1);
 
 				List<IGH_ActiveObject> list = new List<IGH_ActiveObject>(Document.ObjectCount);
@@ -79,7 +82,7 @@ namespace SolutionAsync
 				}
 
 				SortedList<Guid, bool> ignoreList = (SortedList<Guid, bool>)DocumentTask._ignoreListInfo.GetValue(Document);
-				for (int j = 0; j < Document.ObjectCount; j++)
+				for (int j = 0; j < list.Count; j++)
 				{
 					if (GH_Document.IsEscapeKeyDown())
 					{
@@ -131,15 +134,21 @@ namespace SolutionAsync
 						break;
 					}
 				}
+				stopwatch.Stop();
+				string span = stopwatch.Elapsed.ToString("dd\\.hh\\:mm\\:ss");
+
 				if (Document.AbortRequested)
 				{
 					DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.Aborted);
+					Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have aborted the solution.    Time: " + span,
+						GH_RuntimeMessageLevel.Remark));
 				}
 				else
 				{
 					DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+					Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have calcualted successfully.   Time: " + span,
+						GH_RuntimeMessageLevel.Remark));
 				}
-
 			}
 		}
 
