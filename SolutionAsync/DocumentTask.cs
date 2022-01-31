@@ -23,6 +23,20 @@ namespace SolutionAsync
 		internal static readonly FieldInfo _ignoreListInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_ignoreList")).First();
         #endregion
 
+        private static readonly FieldInfo _disposeInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_disposed")).First();
+        private static readonly MethodInfo _solutionSetupInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionSetup")).First();
+        private static readonly MethodInfo _solutionProfilerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiler")).First();
+        private static readonly MethodInfo _scheduleCallDelegatesInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("ScheduleCallDelegates")).First();
+        private static readonly MethodInfo _solutionStartInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionStart")).First();
+        private static readonly MethodInfo _solutionExpireAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionExpireAll")).First();
+        private static readonly MethodInfo _solutionBeginUndoAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionBeginUndo")).First();
+        private static readonly MethodInfo _solutionEndUndoInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionEndUndo")).First();
+        private static readonly MethodInfo _solutionProfiledInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiled")).First();
+        private static readonly MethodInfo _solutionCleanUpInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCleanup")).First();
+        private static readonly MethodInfo _solutionEndInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionEnd")).First();
+        private static readonly MethodInfo _solutionCompletionMessagingInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCompletionMessaging")).First();
+        private static readonly MethodInfo _solutionTriggerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionTriggerSchedules")).First();
+
         public GH_Document Document { get; }
 
         private bool _abort = false;
@@ -33,13 +47,13 @@ namespace SolutionAsync
         {
             Document = doc;
         }
-        internal async Task Compute(GH_SolutionMode mode)
+        internal async Task Compute(bool expireAllObjects, GH_SolutionMode mode)
         {
             if (_isCalculating)
             {
                 if (_isNotFirst)
                 {
-                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" is calculating, Solution Async can't calculate it again. If this causes the unexpective result, please UNABLE Solution Async.",
+                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" is calculating, Solution Async can't calculate it again. If this causes the unexpective result, please ENABLE the component.",
                         GH_RuntimeMessageLevel.Warning));
                 }
                 _isNotFirst = true;
@@ -48,8 +62,69 @@ namespace SolutionAsync
 
             _abort = false;
             _isCalculating = true;
-            await SolveAllObjects(mode);
+            await MyNewSolution(expireAllObjects, mode);
             _isCalculating = false;
+        }
+
+        private async Task MyNewSolution(bool expireAllObjects, GH_SolutionMode mode)
+        {
+            if ((bool)_disposeInfo.GetValue(Document))
+            {
+                return;
+            }
+            if (!GH_Document.EnableSolutions)
+            {
+                Instances.InvalidateCanvas();
+                return;
+            }
+            _solutionSetupInfo.Invoke(Document, new object[] { });
+            DateTime now = DateTime.Now;
+            Stopwatch profiler = (Stopwatch)_solutionProfilerInfo.Invoke(Document, new object[] { });
+            _scheduleCallDelegatesInfo.Invoke(Document, new object[] { });
+            _solutionStartInfo.Invoke(Document, new object[] { });
+            if (Document.Enabled && Document.SolutionState != GH_ProcessStep.Process)
+            {
+                _stateInfo.SetValue(Document, GH_ProcessStep.PreProcess);
+                if (expireAllObjects)
+                {
+                    _solutionExpireAllInfo.Invoke(Document, new object[] { });
+                }
+                uint id = (uint)_solutionBeginUndoAllInfo.Invoke(Document, new object[] { });
+
+                //_stateInfo.SetValue(Document, GH_ProcessStep.Process);
+                _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+                try
+                {
+                    await SolveAllObjects(mode);
+                }
+                catch (Exception ex)
+                {
+                    ProjectData.SetProjectError(ex);
+                    Exception ex2 = ex;
+                    switch (mode)
+                    {
+                        case GH_SolutionMode.Default:
+                            Tracing.Assert(new Guid("{D56F3CBE-219D-4311-8B4B-C61140D441E3}"), "An unhandled solution exception was caught.", ex2);
+                            break;
+                        case GH_SolutionMode.CommandLine:
+                            RhinoApp.WriteLine("An unhandled solution exception was caught.:");
+                            while (ex2 != null)
+                            {
+                                RhinoApp.WriteLine("  " + ex2.Message);
+                                ex2 = ex2.InnerException;
+                            }
+                            break;
+                    }
+                    ProjectData.ClearProjectError();
+                }
+                _solutionEndUndoInfo.Invoke(Document, new object[] { id });
+                _solutionProfiledInfo.Invoke(Document, new object[] { now, profiler });
+            }
+
+            _solutionCleanUpInfo.Invoke(Document, new object[] { });
+            _solutionEndInfo.Invoke(Document, new object[] { now });
+            _solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
+            _solutionTriggerInfo.Invoke(Document, new object[] { mode });
         }
 
         internal void AbortCompute()
@@ -61,9 +136,6 @@ namespace SolutionAsync
 
         private async Task SolveAllObjects(GH_SolutionMode mode)
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-
             _solutionIndexInfo.SetValue(Document, -1);
             List<IGH_ActiveObject> objList = new List<IGH_ActiveObject>(Document.ObjectCount);
             List<Action> setIndexList = new List<Action>(Document.ObjectCount);
@@ -98,23 +170,13 @@ namespace SolutionAsync
                 await level.SolveOneLevel();
             }
 
-            stopwatch.Stop();
-            string span = stopwatch.Elapsed.ToString("dd\\.hh\\:mm\\:ss");
-
-            Rhino.RhinoDoc.ActiveDoc.Views.Redraw();
-
             if (Document.AbortRequested)
             {
                 _stateInfo.SetValue(Document, GH_ProcessStep.Aborted);
-                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have aborted the solution.    Time: " + span,
-                    GH_RuntimeMessageLevel.Remark));
             }
             else
             {
                 _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
-                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have calcualted successfully.   Time: " + span,
-                    GH_RuntimeMessageLevel.Remark));
-
             }
         }
     }

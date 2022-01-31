@@ -27,18 +27,18 @@ namespace SolutionAsync
 
         public override GH_LoadingInstruction PriorityLoad()
         {
-            Grasshopper.Instances.CanvasCreated += Instances_CanvasCreated;
+            Instances.CanvasCreated += Instances_CanvasCreated;
             return GH_LoadingInstruction.Proceed;
         }
 
         private void Instances_CanvasCreated(GH_Canvas canvas)
         {
-            Grasshopper.Instances.CanvasCreated -= Instances_CanvasCreated;
+            Instances.CanvasCreated -= Instances_CanvasCreated;
 
-            GH_DocumentEditor editor = Grasshopper.Instances.DocumentEditor;
+            GH_DocumentEditor editor = Instances.DocumentEditor;
             if (editor == null)
             {
-                Grasshopper.Instances.ActiveCanvas.DocumentChanged += ActiveCanvas_DocumentChanged;
+                Instances.ActiveCanvas.DocumentChanged += ActiveCanvas_DocumentChanged;
                 return;
             }
             DoingSomethingFirst(editor);
@@ -46,9 +46,9 @@ namespace SolutionAsync
 
         private void ActiveCanvas_DocumentChanged(GH_Canvas sender, GH_CanvasDocumentChangedEventArgs e)
         {
-            Grasshopper.Instances.ActiveCanvas.DocumentChanged -= ActiveCanvas_DocumentChanged;
+            Instances.ActiveCanvas.DocumentChanged -= ActiveCanvas_DocumentChanged;
 
-            GH_DocumentEditor editor = Grasshopper.Instances.DocumentEditor;
+            GH_DocumentEditor editor = Instances.DocumentEditor;
             if (editor == null)
             {
                 MessageBox.Show(this.GetType().Name + " can't find the menu!");
@@ -69,26 +69,15 @@ namespace SolutionAsync
             toolStripSeparator.Size = new Size(6, 40);
             _canvasToolbar.Items.Add(toolStripSeparator);
 
-            ToolStripButton useButton = new ToolStripButton(Properties.Resources.UseChangeLevelIcon_24)
-            {
-                Checked = UseSolutionOrderedLevelAsync,
-                Enabled = UseSolutionAsync,
-                ToolTipText = "Change object's solution order to make Calculate much Faster.",
-            };
-            useButton.Click += (sender, e) =>
-            {
-                UseSolutionOrderedLevelAsync = useButton.Checked = !useButton.Checked;
-            };
 
-            ToolStripButton openButton = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
-            { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use Solution Async.\nNOTE: Please UNABLE Solution Async if you are using plugins that need to do some solution events, such as Kangaroo or Anemone." };
+            ToolStripButton openButton = new ToolStripButton(Properties.Resources.UseChangeLevelIcon_24)
+            { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use solution order change." };
             openButton.Click += (sender, e) =>
             {
-                UseSolutionAsync = useButton.Enabled = openButton.Checked = !openButton.Checked;
+                UseSolutionAsync = openButton.Checked = !openButton.Checked;
             };
 
             _canvasToolbar.Items.Add(openButton);
-            _canvasToolbar.Items.Add(useButton);
         }
 
         private void ActiveCanvas_KeyDown(object sender, KeyEventArgs e)

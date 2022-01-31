@@ -23,7 +23,7 @@ namespace SolutionAsync
 		internal static void ChangeFunction()
         {
 			ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(SolveAllObjects))).First(),
-				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("SolveAllObjects")).First());
+				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolution") && info.GetParameters().Length == 2).First());
 		}
 
 		internal static bool ExchangeMethod(MethodInfo targetMethod, MethodInfo injectMethod)
@@ -56,100 +56,10 @@ namespace SolutionAsync
             return true;
         }
 
-        private async void SolveAllObjects(GH_SolutionMode mode)
+        private async void SolveAllObjects(bool expireAllObjects, GH_SolutionMode mode)
         {
 			GH_Document Document = Instances.ActiveCanvas.Document;
-
-			if (SolutionAsyncLoad.UseSolutionAsync)
-                await FindTask(Document).Compute(mode);
-            else
-            {
-				Stopwatch stopwatch = new Stopwatch();
-				stopwatch.Start();
-
-				DocumentTask._solutionIndexInfo.SetValue(Document, -1);
-
-				List<IGH_ActiveObject> list = new List<IGH_ActiveObject>(Document.ObjectCount);
-				List<int> list2 = new List<int>(Document.ObjectCount);
-				for (int i = 0; i < Document.ObjectCount; i++)
-				{
-					IGH_ActiveObject iGH_ActiveObject = Document.Objects[i] as IGH_ActiveObject;
-					if (iGH_ActiveObject != null)
-					{
-						list.Add(iGH_ActiveObject);
-						list2.Add(i);
-					}
-				}
-
-				SortedList<Guid, bool> ignoreList = (SortedList<Guid, bool>)DocumentTask._ignoreListInfo.GetValue(Document);
-				for (int j = 0; j < list.Count; j++)
-				{
-					if (GH_Document.IsEscapeKeyDown())
-					{
-						DocumentTask._abordInfo.SetValue(Document, true);
-					}
-					if (Document.AbortRequested)
-					{
-						break;
-					}
-
-					DocumentTask._solutionIndexInfo.SetValue(Document, list2[j]);
-					IGH_ActiveObject actObject = list[j];
-					try
-					{
-						if (actObject.Phase == GH_SolutionPhase.Computed)
-						{
-							continue;
-						}
-						actObject.CollectData();
-						actObject.ComputeData();
-					}
-					catch (Exception ex)
-					{
-						ProjectData.SetProjectError(ex);
-						Exception ex2 = ex;
-						actObject.Phase = GH_SolutionPhase.Failed;
-						actObject.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex2.Message);
-						HostUtils.ExceptionReport(ex2);
-						if (mode == GH_SolutionMode.Default && !RhinoApp.IsRunningHeadless && !ignoreList.ContainsKey(actObject.InstanceGuid))
-						{
-							GH_ObjectExceptionDialog gH_ObjectExceptionDialog = new GH_ObjectExceptionDialog();
-
-							((Label)GraphNode._iconInfo.GetValue(gH_ObjectExceptionDialog)).Image = actObject.Icon_24x24;
-							((Label)GraphNode._nameInfo.GetValue(gH_ObjectExceptionDialog)).Text = $"{actObject.Name} [{actObject.NickName}]";
-							((Label)GraphNode._exceptionInfo.GetValue(gH_ObjectExceptionDialog)).Text = "An exception was thrown during a solution:" + Environment.NewLine + $"Component: {actObject.Name}" + Environment.NewLine + $"c_UUID: {actObject.InstanceGuid}" + Environment.NewLine + $"c_POS: {actObject.Attributes.Pivot}" + Environment.NewLine + Environment.NewLine + ex2.Message;
-
-							GH_WindowsFormUtil.CenterFormOnEditor((Form)gH_ObjectExceptionDialog, limitToScreen: true);
-							gH_ObjectExceptionDialog.ShowDialog(Instances.DocumentEditor);
-							if (((CheckBox)GraphNode._dontShotInfo.GetValue(gH_ObjectExceptionDialog)).Checked)
-							{
-								ignoreList.Add(actObject.InstanceGuid, value: true);
-							}
-						}
-						ProjectData.ClearProjectError();
-					}
-					actObject.Attributes.ExpireLayout();
-					if (Document.AbortRequested)
-					{
-						break;
-					}
-				}
-				stopwatch.Stop();
-				string span = stopwatch.Elapsed.ToString("dd\\.hh\\:mm\\:ss");
-
-				if (Document.AbortRequested)
-				{
-					DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.Aborted);
-					Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have aborted the solution.    Time: " + span,
-						GH_RuntimeMessageLevel.Remark));
-				}
-				else
-				{
-					DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
-					Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" have calcualted successfully.   Time: " + span,
-						GH_RuntimeMessageLevel.Remark));
-				}
-			}
+            await FindTask(Document).Compute(expireAllObjects, mode);
 		}
 
         private static DocumentTask FindTask(GH_Document doc)
