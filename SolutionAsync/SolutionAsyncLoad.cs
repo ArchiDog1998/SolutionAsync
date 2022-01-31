@@ -14,11 +14,6 @@ namespace SolutionAsync
 {
     public class SolutionAsyncLoad : GH_AssemblyPriority
     {
-        public static bool UseSolutionAsync
-        {
-            get => Instances.Settings.GetValue(nameof(UseSolutionAsync), true);
-            set => Instances.Settings.SetValue(nameof(UseSolutionAsync), value);
-        }
         public static bool UseSolutionOrderedLevelAsync
         {
             get => Instances.Settings.GetValue(nameof(UseSolutionOrderedLevelAsync), true);
@@ -71,10 +66,10 @@ namespace SolutionAsync
 
 
             ToolStripButton openButton = new ToolStripButton(Properties.Resources.UseChangeLevelIcon_24)
-            { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use solution order change." };
+            { Checked = UseSolutionOrderedLevelAsync, ToolTipText = "Choose whether to use solution order change." };
             openButton.Click += (sender, e) =>
             {
-                UseSolutionAsync = openButton.Checked = !openButton.Checked;
+                UseSolutionOrderedLevelAsync = openButton.Checked = !openButton.Checked;
             };
 
             _canvasToolbar.Items.Add(openButton);

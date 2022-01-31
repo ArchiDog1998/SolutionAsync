@@ -53,7 +53,7 @@ namespace SolutionAsync
             {
                 if (_isNotFirst)
                 {
-                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" is calculating, Solution Async can't calculate it again. If this causes the unexpective result, please ENABLE the component.",
+                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" is calculating, Solution Async can't calculate it again. Please recalculate it later.",
                         GH_RuntimeMessageLevel.Warning));
                 }
                 _isNotFirst = true;
