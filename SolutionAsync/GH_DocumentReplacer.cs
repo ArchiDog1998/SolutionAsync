@@ -20,9 +20,11 @@ namespace SolutionAsync
     public class GH_DocumentReplacer
     {
 		private static readonly List<DocumentTask> _documentTasks = new List<DocumentTask>();
-		internal static void ChangeFunction()
+        private static readonly MethodInfo _solveAllObjInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("SolveAllObjects")).First();
+        internal static IGH_ActiveObject LastCalculate { private get; set; }
+        internal static void ChangeFunction()
         {
-			ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(SolveAllObjects))).First(),
+			ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyNewSolution))).First(),
 				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolution") && info.GetParameters().Length == 2).First());
 		}
 
@@ -56,11 +58,91 @@ namespace SolutionAsync
             return true;
         }
 
-        private async void SolveAllObjects(bool expireAllObjects, GH_SolutionMode mode)
+        private async void MyNewSolution(bool expireAllObjects, GH_SolutionMode mode)
         {
 			GH_Document Document = Instances.ActiveCanvas.Document;
-            await FindTask(Document).Compute(expireAllObjects, mode);
-		}
+
+            if (SolutionAsyncLoad.UseSolutionAsync)
+            {
+                try
+                {
+                    await FindTask(Document).Compute(expireAllObjects, mode);
+                }
+                catch (Exception ex)
+                {
+                    string pluginsName = LastCalculate.GetType().Assembly.GetName().Name;
+
+                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Solution Async failed to calculate! Maybe it is NOT compatible with {pluginsName}...",
+                        GH_RuntimeMessageLevel.Error));
+
+                    string message = $"When Solution Async Calculating \"{LastCalculate.Name}\" from {pluginsName}, we got an exception:";
+                    message += "\n \n" + ex.Message;
+                    MessageBox.Show(message, ex.GetType().Name);
+                }
+            }
+            else
+            {
+                if ((bool)DocumentTask._disposeInfo.GetValue(Document))
+                {
+                    return;
+                }
+                if (!GH_Document.EnableSolutions)
+                {
+                    Instances.InvalidateCanvas();
+                    return;
+                }
+                DocumentTask._solutionSetupInfo.Invoke(Document, new object[] { });
+                DateTime now = DateTime.Now;
+                Stopwatch profiler = (Stopwatch)DocumentTask._solutionProfilerInfo.Invoke(Document, new object[] { });
+                DocumentTask._scheduleCallDelegatesInfo.Invoke(Document, new object[] { });
+                DocumentTask._solutionStartInfo.Invoke(Document, new object[] { });
+                if (Document.Enabled && Document.SolutionState != GH_ProcessStep.Process)
+                {
+                    DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PreProcess);
+                    if (expireAllObjects)
+                    {
+                        DocumentTask._solutionExpireAllInfo.Invoke(Document, new object[] { });
+                    }
+                    uint id = (uint)DocumentTask._solutionBeginUndoAllInfo.Invoke(Document, new object[] { });
+
+                    //_stateInfo.SetValue(Document, GH_ProcessStep.Process);
+                    DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+                    try
+                    {
+                        _solveAllObjInfo.Invoke(Document, new object[] { mode });
+                    }
+                    catch (Exception ex)
+                    {
+                        ProjectData.SetProjectError(ex);
+                        Exception ex2 = ex;
+                        switch (mode)
+                        {
+                            case GH_SolutionMode.Default:
+                                Tracing.Assert(new Guid("{D56F3CBE-219D-4311-8B4B-C61140D441E3}"), "An unhandled solution exception was caught.", ex2);
+                                break;
+                            case GH_SolutionMode.CommandLine:
+                                RhinoApp.WriteLine("An unhandled solution exception was caught.:");
+                                while (ex2 != null)
+                                {
+                                    RhinoApp.WriteLine("  " + ex2.Message);
+                                    ex2 = ex2.InnerException;
+                                }
+                                break;
+                        }
+                        ProjectData.ClearProjectError();
+                    }
+                    DocumentTask._solutionEndUndoInfo.Invoke(Document, new object[] { id });
+                    DocumentTask._solutionProfiledInfo.Invoke(Document, new object[] { now, profiler });
+                }
+
+                DocumentTask._solutionCleanUpInfo.Invoke(Document, new object[] { });
+                DocumentTask._solutionEndInfo.Invoke(Document, new object[] { now });
+                DocumentTask._solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
+                DocumentTask._solutionTriggerInfo.Invoke(Document, new object[] { mode });
+
+            }
+
+        }
 
         private static DocumentTask FindTask(GH_Document doc)
         {

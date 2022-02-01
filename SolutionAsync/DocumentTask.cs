@@ -18,52 +18,118 @@ namespace SolutionAsync
     {
         #region SolveAllObjects Field
         internal static readonly FieldInfo _stateInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("_state")).First();
-		internal static readonly FieldInfo _abordInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_abortRequested")).First();
-		internal static readonly FieldInfo _solutionIndexInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_solutionIndex")).First();
-		internal static readonly FieldInfo _ignoreListInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_ignoreList")).First();
+        internal static readonly FieldInfo _abordInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_abortRequested")).First();
+        internal static readonly FieldInfo _solutionIndexInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_solutionIndex")).First();
+        internal static readonly FieldInfo _ignoreListInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_ignoreList")).First();
         #endregion
 
-        private static readonly FieldInfo _disposeInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_disposed")).First();
-        private static readonly MethodInfo _solutionSetupInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionSetup")).First();
-        private static readonly MethodInfo _solutionProfilerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiler")).First();
-        private static readonly MethodInfo _scheduleCallDelegatesInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("ScheduleCallDelegates")).First();
-        private static readonly MethodInfo _solutionStartInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionStart")).First();
-        private static readonly MethodInfo _solutionExpireAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionExpireAll")).First();
-        private static readonly MethodInfo _solutionBeginUndoAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionBeginUndo")).First();
-        private static readonly MethodInfo _solutionEndUndoInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionEndUndo")).First();
-        private static readonly MethodInfo _solutionProfiledInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiled")).First();
-        private static readonly MethodInfo _solutionCleanUpInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCleanup")).First();
-        private static readonly MethodInfo _solutionEndInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionEnd")).First();
-        private static readonly MethodInfo _solutionCompletionMessagingInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCompletionMessaging")).First();
-        private static readonly MethodInfo _solutionTriggerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionTriggerSchedules")).First();
+        internal static readonly FieldInfo _disposeInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_disposed")).First();
+        internal static readonly MethodInfo _solutionSetupInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionSetup")).First();
+        internal static readonly MethodInfo _solutionProfilerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiler")).First();
+        internal static readonly MethodInfo _scheduleCallDelegatesInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("ScheduleCallDelegates")).First();
+        internal static readonly MethodInfo _solutionStartInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionStart")).First();
+        internal static readonly MethodInfo _solutionExpireAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionExpireAll")).First();
+        internal static readonly MethodInfo _solutionBeginUndoAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionBeginUndo")).First();
+        internal static readonly MethodInfo _solutionEndUndoInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionEndUndo")).First();
+        internal static readonly MethodInfo _solutionProfiledInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiled")).First();
+        internal static readonly MethodInfo _solutionCleanUpInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCleanup")).First();
+        internal static readonly MethodInfo _solutionEndInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionEnd")).First();
+        internal static readonly MethodInfo _solutionCompletionMessagingInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCompletionMessaging")).First();
+        internal static readonly MethodInfo _solutionTriggerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionTriggerSchedules")).First();
 
         public GH_Document Document { get; }
 
-        private bool _abort = false;
-        private bool _isCalculating = false;
-        private bool _isNotFirst = false;
+        private bool _recomputeAbort = false;
+        private bool _ManualCancel = false;
+        //private bool _isCalculating = false;
+        private bool _isFirst = true;
+        //private readonly Queue<Task> _tasks = new Queue<Task>(new Task[] { Task.CompletedTask });
+
+        /// <summary>
+        /// Contain the right task.
+        /// </summary>
+        private Task _task = Task.CompletedTask;
+
+        /// <summary>
+        /// Record the calculate count.
+        /// </summary>
+        private int _count = -1;
 
         public DocumentTask(GH_Document doc)
         {
             Document = doc;
         }
+        private int AddACalculate()
+        {
+            //Abort all solution.
+            _recomputeAbort = true;
+
+            //Add a count.
+            _count++;
+
+            Instances.ActiveCanvas.Refresh();
+
+            //Return right count.
+            return _count;
+        }
+
+        private bool ShouldCalulate(int count)
+        {
+            return _count == count;
+        }
+
         internal async Task Compute(bool expireAllObjects, GH_SolutionMode mode)
         {
-            if (_isCalculating)
+            if (_isFirst)
             {
-                if (_isNotFirst)
-                {
-                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" is calculating, Solution Async can't calculate it again. Please recalculate it later.",
-                        GH_RuntimeMessageLevel.Warning));
-                }
-                _isNotFirst = true;
+                _isFirst = false;
                 return;
             }
 
-            _abort = false;
-            _isCalculating = true;
-            await MyNewSolution(expireAllObjects, mode);
-            _isCalculating = false;
+            int count = AddACalculate();
+
+            await _task;
+            Task rightTask = _task = _task.ContinueWith(async fakeTask =>
+            {
+                if (ShouldCalulate(count))
+                {
+                    _recomputeAbort = false;
+                    _ManualCancel = false;
+
+                    await MyNewSolution(expireAllObjects, mode);
+                }
+            }).Result;
+
+            await rightTask;
+
+            ////Abort all solution.
+            //_abort = true;
+
+            ////Find the last Task.
+            //Task lastTask = _tasks.Last();
+
+            ////Check for the right Task.
+            //Task<Task> notRightTask = lastTask.ContinueWith(async fakeTask =>
+            //{
+            //    if (_tasks.Last() == lastTask)
+            //    {
+            //        _abort = false;
+            //        await MyNewSolution(expireAllObjects, mode);
+            //    }
+
+            //    //Remove the rubbish task.
+            //    _ = _tasks.Dequeue();
+            //});
+
+            //await notRightTask;
+            //Task rightTask = notRightTask.Result;
+
+            ////Add to Queue.
+            //_tasks.Enqueue(rightTask);
+
+            //await rightTask;
+
+
         }
 
         private async Task MyNewSolution(bool expireAllObjects, GH_SolutionMode mode)
@@ -124,12 +190,16 @@ namespace SolutionAsync
             _solutionCleanUpInfo.Invoke(Document, new object[] { });
             _solutionEndInfo.Invoke(Document, new object[] { now });
             _solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
-            _solutionTriggerInfo.Invoke(Document, new object[] { mode });
+
+            Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
+            {
+                _solutionTriggerInfo.Invoke(Document, new object[] { mode });
+            });
         }
 
         internal void AbortCompute()
         {
-            _abort = true;
+            _ManualCancel = true;
             Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" received Cancel solution Command.",
                 GH_RuntimeMessageLevel.Remark));
         }
@@ -156,11 +226,21 @@ namespace SolutionAsync
                 Calculatelevel.CrateLevels(objList, setIndexList, SolutionAsyncLoad.UseSolutionOrderedLevelAsync, ignoreList, mode));
             Calculatelevel[] levels = getLevels.Result;
 
-            foreach (var level in levels)
+            for (int i = 0; i < levels.Length; i++)
             {
-                if (_abort)
+                Calculatelevel level = levels[i];
+                if (_ManualCancel)
                 {
                     _abordInfo.SetValue(Document, true);
+
+                }
+                if (_recomputeAbort)
+                {
+                    if (i != 0)
+                    {
+                        levels[i - 1].ClearLevel();
+                    }
+                    break;
                 }
                 if (Document.AbortRequested)
                 {

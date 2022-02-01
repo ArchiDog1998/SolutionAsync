@@ -14,6 +14,11 @@ namespace SolutionAsync
 {
     public class SolutionAsyncLoad : GH_AssemblyPriority
     {
+        public static bool UseSolutionAsync
+        {
+            get => Instances.Settings.GetValue(nameof(UseSolutionAsync), true);
+            set => Instances.Settings.SetValue(nameof(UseSolutionAsync), value);
+        }
         public static bool UseSolutionOrderedLevelAsync
         {
             get => Instances.Settings.GetValue(nameof(UseSolutionOrderedLevelAsync), true);
@@ -65,14 +70,26 @@ namespace SolutionAsync
             _canvasToolbar.Items.Add(toolStripSeparator);
 
 
-            ToolStripButton openButton = new ToolStripButton(Properties.Resources.UseChangeLevelIcon_24)
-            { Checked = UseSolutionOrderedLevelAsync, ToolTipText = "Choose whether to use solution order change." };
+            ToolStripButton useButton = new ToolStripButton(Properties.Resources.UseChangeLevelIcon_24)
+            {
+                Checked = UseSolutionOrderedLevelAsync,
+                Enabled = UseSolutionAsync,
+                ToolTipText = "Change object's solution order to make Calculate much Faster.",
+            };
+            useButton.Click += (sender, e) =>
+            {
+                UseSolutionOrderedLevelAsync = useButton.Checked = !useButton.Checked;
+            };
+
+            ToolStripButton openButton = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
+            { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use Solution Async." };
             openButton.Click += (sender, e) =>
             {
-                UseSolutionOrderedLevelAsync = openButton.Checked = !openButton.Checked;
+                UseSolutionAsync = useButton.Enabled = openButton.Checked = !openButton.Checked;
             };
 
             _canvasToolbar.Items.Add(openButton);
+            _canvasToolbar.Items.Add(useButton);
         }
 
         private void ActiveCanvas_KeyDown(object sender, KeyEventArgs e)

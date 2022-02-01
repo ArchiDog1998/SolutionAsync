@@ -1,9 +1,11 @@
-﻿using Grasshopper.Kernel;
+﻿using Grasshopper;
+using Grasshopper.Kernel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace SolutionAsync
 {
@@ -26,8 +28,18 @@ namespace SolutionAsync
             return Task.Run(() =>
             {
                 Task.WaitAll(_nodes.Select(no => no.SolveOneObject()).ToArray());
-                Grasshopper.Instances.ActiveCanvas.ScheduleRegen(1);
+                Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
+                {
+                    Instances.ActiveCanvas.Refresh();
+                });
             });
+        }
+        internal void ClearLevel()
+        {
+            foreach (var node in _nodes)
+            {
+                node.ActiveObject.ClearData();
+            }
         }
         internal static Calculatelevel[] CrateLevels(List<IGH_ActiveObject> objs, List<Action> indexes, bool Calculate, SortedList<Guid, bool> ignoreList, GH_SolutionMode mode)
         {

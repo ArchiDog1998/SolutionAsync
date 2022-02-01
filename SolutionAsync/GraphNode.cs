@@ -106,6 +106,8 @@ namespace SolutionAsync
                     {
                         return;
                     }
+
+                    GH_DocumentReplacer.LastCalculate = ActiveObject;
                     ActiveObject.CollectData();
                     ActiveObject.ComputeData();
                 }
@@ -118,7 +120,7 @@ namespace SolutionAsync
                     HostUtils.ExceptionReport(ex2);
                     if (_mode == GH_SolutionMode.Default && !RhinoApp.IsRunningHeadless && !_ignoreList.ContainsKey(ActiveObject.InstanceGuid))
                     {
-                        Grasshopper.Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
+                        Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
                         {
                             GH_ObjectExceptionDialog gH_ObjectExceptionDialog = new GH_ObjectExceptionDialog();
 
