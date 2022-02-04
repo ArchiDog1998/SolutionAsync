@@ -17,14 +17,15 @@ using System.Diagnostics;
 
 namespace SolutionAsync
 {
-    public class GH_DocumentReplacer
+    public static class GH_DocumentReplacer
     {
 		private static readonly List<DocumentTask> _documentTasks = new List<DocumentTask>();
         private static readonly MethodInfo _solveAllObjInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("SolveAllObjects")).First();
         internal static IGH_ActiveObject LastCalculate { private get; set; }
         internal static void ChangeFunction()
         {
-			ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyNewSolution))).First(),
+            ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyNewSolution))).First(),
+                //typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("SolveAllObjects")).First());
 				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolution") && info.GetParameters().Length == 2).First());
 		}
 
@@ -58,11 +59,9 @@ namespace SolutionAsync
             return true;
         }
 
-        private async void MyNewSolution(bool expireAllObjects, GH_SolutionMode mode)
+        private static async void MyNewSolution(this GH_Document Document, bool expireAllObjects, GH_SolutionMode mode)
         {
-			GH_Document Document = Instances.ActiveCanvas.Document;
-
-            if (SolutionAsyncLoad.UseSolutionAsync)
+            if (SolutionAsyncLoad.UseSolutionAsync && Document == Instances.ActiveCanvas.Document)
             {
                 try
                 {
@@ -139,9 +138,7 @@ namespace SolutionAsync
                 DocumentTask._solutionEndInfo.Invoke(Document, new object[] { now });
                 DocumentTask._solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
                 DocumentTask._solutionTriggerInfo.Invoke(Document, new object[] { mode });
-
             }
-
         }
 
         private static DocumentTask FindTask(GH_Document doc)

@@ -102,34 +102,6 @@ namespace SolutionAsync
 
             await rightTask;
 
-            ////Abort all solution.
-            //_abort = true;
-
-            ////Find the last Task.
-            //Task lastTask = _tasks.Last();
-
-            ////Check for the right Task.
-            //Task<Task> notRightTask = lastTask.ContinueWith(async fakeTask =>
-            //{
-            //    if (_tasks.Last() == lastTask)
-            //    {
-            //        _abort = false;
-            //        await MyNewSolution(expireAllObjects, mode);
-            //    }
-
-            //    //Remove the rubbish task.
-            //    _ = _tasks.Dequeue();
-            //});
-
-            //await notRightTask;
-            //Task rightTask = notRightTask.Result;
-
-            ////Add to Queue.
-            //_tasks.Enqueue(rightTask);
-
-            //await rightTask;
-
-
         }
 
         private async Task MyNewSolution(bool expireAllObjects, GH_SolutionMode mode)
