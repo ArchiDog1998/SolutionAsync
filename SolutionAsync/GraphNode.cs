@@ -95,54 +95,59 @@ namespace SolutionAsync
             }
         }
 
-        internal Task SolveOneObject()
+        private Task SolveOne()
         {
             return Task.Run(() =>
             {
-                _setIndex.Invoke();
-                try
-                {
-                    if (ActiveObject.Phase == GH_SolutionPhase.Computed)
-                    {
-                        return;
-                    }
-
-                    GH_DocumentReplacer.LastCalculate = ActiveObject;
-                    ActiveObject.CollectData();
-                    ActiveObject.ComputeData();
-                }
-                catch (Exception ex)
-                {
-                    ProjectData.SetProjectError(ex);
-                    Exception ex2 = ex;
-                    ActiveObject.Phase = GH_SolutionPhase.Failed;
-                    ActiveObject.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex2.Message);
-                    HostUtils.ExceptionReport(ex2);
-                    if (_mode == GH_SolutionMode.Default && !RhinoApp.IsRunningHeadless && !_ignoreList.ContainsKey(ActiveObject.InstanceGuid))
-                    {
-                        Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
-                        {
-                            GH_ObjectExceptionDialog gH_ObjectExceptionDialog = new GH_ObjectExceptionDialog();
-
-                            ((Label)_iconInfo.GetValue(gH_ObjectExceptionDialog)).Image = ActiveObject.Icon_24x24;
-                            ((Label)_nameInfo.GetValue(gH_ObjectExceptionDialog)).Text = $"{ActiveObject.Name} [{ActiveObject.NickName}]";
-                            ((Label)_exceptionInfo.GetValue(gH_ObjectExceptionDialog)).Text = "An exception was thrown during a solution:" + Environment.NewLine + $"Component: {ActiveObject.Name}" + Environment.NewLine + $"c_UUID: {ActiveObject.InstanceGuid}" + Environment.NewLine + $"c_POS: {ActiveObject.Attributes.Pivot}" + Environment.NewLine + Environment.NewLine + ex2.Message;
-
-                            GH_WindowsFormUtil.CenterFormOnEditor((Form)gH_ObjectExceptionDialog, limitToScreen: true);
-                            gH_ObjectExceptionDialog.ShowDialog(Instances.DocumentEditor);
-                            if (((CheckBox)_dontShotInfo.GetValue(gH_ObjectExceptionDialog)).Checked)
-                            {
-                                _ignoreList.Add(ActiveObject.InstanceGuid, value: true);
-                            }
-                        });
-                    }
-                    ProjectData.ClearProjectError();
-                }
-                finally
-                {
-                    ActiveObject.Attributes.ExpireLayout();
-                }
+                ActiveObject.CollectData();
+                ActiveObject.ComputeData();
             });
+        }
+
+        internal async Task SolveOneObject()
+        {
+            _setIndex.Invoke();
+            try
+            {
+                if (ActiveObject.Phase == GH_SolutionPhase.Computed)
+                {
+                    return;
+                }
+
+                GH_DocumentReplacer.LastCalculate = ActiveObject;
+                await SolveOne();
+            }
+            catch (Exception ex)
+            {
+                ProjectData.SetProjectError(ex);
+                Exception ex2 = ex;
+                ActiveObject.Phase = GH_SolutionPhase.Failed;
+                ActiveObject.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex2.Message);
+                HostUtils.ExceptionReport(ex2);
+                if (_mode == GH_SolutionMode.Default && !RhinoApp.IsRunningHeadless && !_ignoreList.ContainsKey(ActiveObject.InstanceGuid))
+                {
+                    Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
+                    {
+                        GH_ObjectExceptionDialog gH_ObjectExceptionDialog = new GH_ObjectExceptionDialog();
+
+                        ((Label)_iconInfo.GetValue(gH_ObjectExceptionDialog)).Image = ActiveObject.Icon_24x24;
+                        ((Label)_nameInfo.GetValue(gH_ObjectExceptionDialog)).Text = $"{ActiveObject.Name} [{ActiveObject.NickName}]";
+                        ((Label)_exceptionInfo.GetValue(gH_ObjectExceptionDialog)).Text = "An exception was thrown during a solution:" + Environment.NewLine + $"Component: {ActiveObject.Name}" + Environment.NewLine + $"c_UUID: {ActiveObject.InstanceGuid}" + Environment.NewLine + $"c_POS: {ActiveObject.Attributes.Pivot}" + Environment.NewLine + Environment.NewLine + ex2.Message;
+
+                        GH_WindowsFormUtil.CenterFormOnEditor(gH_ObjectExceptionDialog, limitToScreen: true);
+                        gH_ObjectExceptionDialog.ShowDialog(Instances.DocumentEditor);
+                        if (((CheckBox)_dontShotInfo.GetValue(gH_ObjectExceptionDialog)).Checked)
+                        {
+                            _ignoreList.Add(ActiveObject.InstanceGuid, value: true);
+                        }
+                    });
+                }
+                ProjectData.ClearProjectError();
+            }
+            finally
+            {
+                ActiveObject.Attributes.ExpireLayout();
+            }
         }
     }
 }

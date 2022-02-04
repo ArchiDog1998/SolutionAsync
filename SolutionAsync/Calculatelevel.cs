@@ -23,15 +23,12 @@ namespace SolutionAsync
         {
             _nodes.Add(node);
         }
-        internal Task SolveOneLevel()
+        internal async Task SolveOneLevel()
         {
-            return Task.Run(() =>
+            await Task.WhenAll(_nodes.Select(no => no.SolveOneObject()).ToArray());
+            Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
             {
-                Task.WaitAll(_nodes.Select(no => no.SolveOneObject()).ToArray());
-                Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
-                {
-                    Instances.ActiveCanvas.Refresh();
-                });
+                Instances.ActiveCanvas.Refresh();
             });
         }
         internal void ClearLevel()
