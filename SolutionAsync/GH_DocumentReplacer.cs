@@ -21,14 +21,34 @@ namespace SolutionAsync
     {
 		private static readonly List<DocumentTask> _documentTasks = new List<DocumentTask>();
         private static readonly MethodInfo _solveAllObjInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("SolveAllObjects")).First();
+
+        private static readonly FieldInfo _disposeInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_disposed")).First();
+        private static readonly MethodInfo _solutionSetupInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionSetup")).First();
+        private static readonly MethodInfo _solutionProfilerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiler")).First();
+        private static readonly MethodInfo _scheduleCallDelegatesInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("ScheduleCallDelegates")).First();
+        private static readonly MethodInfo _solutionStartInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionStart")).First();
+        private static readonly MethodInfo _solutionExpireAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionExpireAll")).First();
+        private static readonly MethodInfo _solutionBeginUndoAllInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionBeginUndo")).First();
+        private static readonly MethodInfo _solutionEndUndoInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionEndUndo")).First();
+        private static readonly MethodInfo _solutionProfiledInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionProfiled")).First();
+        private static readonly MethodInfo _solutionCleanUpInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCleanup")).First();
+        private static readonly MethodInfo _solutionEndInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionOnSolutionEnd")).First();
+        private static readonly MethodInfo _solutionCompletionMessagingInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionCompletionMessaging")).First();
+        private static readonly MethodInfo _solutionTriggerInfo = typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolutionTriggerSchedules")).First();
+
+
         internal static IGH_ActiveObject LastCalculate { private get; set; }
+
         internal static void ChangeFunction()
         {
             ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyNewSolution))).First(),
 				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolution") && info.GetParameters().Length == 2).First());
-		}
+            ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyRedrawAll))).First(),
+                typeof(Instances).GetRuntimeMethods().Where(info => info.Name.Contains("RedrawAll")).First());
 
-		internal static bool ExchangeMethod(MethodInfo targetMethod, MethodInfo injectMethod)
+        }
+
+        internal static bool ExchangeMethod(MethodInfo targetMethod, MethodInfo injectMethod)
         {
             if (targetMethod == null || injectMethod == null)
             {
@@ -58,55 +78,69 @@ namespace SolutionAsync
             return true;
         }
 
+        public static void MyRedrawAll()
+        {
+            Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
+            {
+                Instances.RedrawCanvas();
+                RhinoDoc.ActiveDoc?.Views.Redraw();
+            });
+
+        }
+
         private static async void MyNewSolution(this GH_Document Document, bool expireAllObjects, GH_SolutionMode mode)
         {
-            if (SolutionAsyncLoad.UseSolutionAsync && Document == Instances.ActiveCanvas.Document)
+            if ((bool)_disposeInfo.GetValue(Document))
             {
-                try
-                {
-                    await FindTask(Document).Compute(expireAllObjects, mode);
-                }
-                catch (Exception ex)
-                {
-                    string pluginsName = LastCalculate.GetType().Assembly.GetName().Name;
-
-                    Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Solution Async failed to calculate! Maybe it is NOT compatible with {pluginsName}...",
-                        GH_RuntimeMessageLevel.Error));
-
-                    string message = $"When Solution Async Calculating \"{LastCalculate.Name}\" from {pluginsName}, we got an exception:";
-                    message += "\n \n" + ex.Message;
-                    MessageBox.Show(message, ex.GetType().Name);
-                }
+                return;
             }
-            else
+            if (!GH_Document.EnableSolutions)
             {
-                if ((bool)DocumentTask._disposeInfo.GetValue(Document))
-                {
-                    return;
-                }
-                if (!GH_Document.EnableSolutions)
-                {
-                    Instances.InvalidateCanvas();
-                    return;
-                }
-                DocumentTask._solutionSetupInfo.Invoke(Document, new object[] { });
-                DateTime now = DateTime.Now;
-                Stopwatch profiler = (Stopwatch)DocumentTask._solutionProfilerInfo.Invoke(Document, new object[] { });
-                DocumentTask._scheduleCallDelegatesInfo.Invoke(Document, new object[] { });
-                DocumentTask._solutionStartInfo.Invoke(Document, new object[] { });
-                if (Document.Enabled && Document.SolutionState != GH_ProcessStep.Process)
-                {
-                    DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PreProcess);
-                    if (expireAllObjects)
-                    {
-                        DocumentTask._solutionExpireAllInfo.Invoke(Document, new object[] { });
-                    }
-                    uint id = (uint)DocumentTask._solutionBeginUndoAllInfo.Invoke(Document, new object[] { });
+                Instances.InvalidateCanvas();
+                return;
+            }
 
-                    //_stateInfo.SetValue(Document, GH_ProcessStep.Process);
+            DocumentTask task = FindTask(Document);
+
+            _solutionSetupInfo.Invoke(Document, new object[] { });
+            DateTime now = DateTime.Now;
+            Stopwatch profiler = (Stopwatch)_solutionProfilerInfo.Invoke(Document, new object[] { });
+            _scheduleCallDelegatesInfo.Invoke(Document, new object[] { });
+            _solutionStartInfo.Invoke(Document, new object[] { });
+
+            if (Document.Enabled && Document.SolutionState != GH_ProcessStep.Process)
+            {
+                DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PreProcess);
+                if (expireAllObjects)
+                {
+                    _solutionExpireAllInfo.Invoke(Document, new object[] { });
+                }
+                uint id = (uint)_solutionBeginUndoAllInfo.Invoke(Document, new object[] { });
+
+                if (SolutionAsyncLoad.UseSolutionAsync && Document == Instances.ActiveCanvas.Document)
+                {
                     DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
                     try
                     {
+                        await task.Compute(mode);
+                    }
+                    catch (Exception ex)
+                    {
+                        string pluginsName = LastCalculate.GetType().Assembly.GetName().Name;
+
+                        Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Solution Async failed to calculate! Maybe it is NOT compatible with {pluginsName}...",
+                            GH_RuntimeMessageLevel.Error));
+
+                        string message = $"When Solution Async Calculating \"{LastCalculate.Name}\" from {pluginsName}, we got an exception:";
+                        message += "\n \n" + ex.Message;
+                        MessageBox.Show(Instances.DocumentEditor, message, ex.GetType().Name);
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.Process);
                         _solveAllObjInfo.Invoke(Document, new object[] { mode });
                     }
                     catch (Exception ex)
@@ -129,15 +163,17 @@ namespace SolutionAsync
                         }
                         ProjectData.ClearProjectError();
                     }
-                    DocumentTask._solutionEndUndoInfo.Invoke(Document, new object[] { id });
-                    DocumentTask._solutionProfiledInfo.Invoke(Document, new object[] { now, profiler });
-                }
 
-                DocumentTask._solutionCleanUpInfo.Invoke(Document, new object[] { });
-                DocumentTask._solutionEndInfo.Invoke(Document, new object[] { now });
-                DocumentTask._solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
-                DocumentTask._solutionTriggerInfo.Invoke(Document, new object[] { mode });
+                }
+                _solutionEndUndoInfo.Invoke(Document, new object[] { id });
+                _solutionProfiledInfo.Invoke(Document, new object[] { now, profiler });
             }
+
+            DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+            _solutionCleanUpInfo.Invoke(Document, new object[] { });
+            _solutionEndInfo.Invoke(Document, new object[] { now });
+            _solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
+            _solutionTriggerInfo.Invoke(Document, new object[] { mode });
         }
 
         private static DocumentTask FindTask(GH_Document doc)

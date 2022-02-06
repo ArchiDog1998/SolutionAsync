@@ -17,6 +17,12 @@ namespace SolutionAsync
 {
     internal class GraphNode
     {
+        private static readonly List<Guid> _noAsyncObj = new List<Guid>()
+        {
+            new Guid("92c0e67c-7332-4de6-82a0-f8603b819baf"),
+        };
+
+        private bool UseBackTask => !_noAsyncObj.Contains(ActiveObject.ComponentGuid);
         public IGH_ActiveObject ActiveObject { get; }
         private Action _setIndex;
         /// <summary>
@@ -95,15 +101,6 @@ namespace SolutionAsync
             }
         }
 
-        private Task SolveOne()
-        {
-            return Task.Run(() =>
-            {
-                ActiveObject.CollectData();
-                ActiveObject.ComputeData();
-            });
-        }
-
         internal async Task SolveOneObject()
         {
             _setIndex.Invoke();
@@ -114,8 +111,31 @@ namespace SolutionAsync
                     return;
                 }
 
-                GH_DocumentReplacer.LastCalculate = ActiveObject;
-                await SolveOne();
+                if (UseBackTask)
+                {
+                    GH_DocumentReplacer.LastCalculate = ActiveObject;
+                    await Task.Run(() =>
+                    {
+                        ActiveObject.CollectData();
+                        try
+                        {
+                            ActiveObject.ComputeData();
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(Instances.DocumentEditor, ex.Message);
+                        }
+                    });
+                }
+                else
+                {
+                    bool a = (bool)Instances.ActiveCanvas.Invoke((Func<bool>)delegate
+                    {
+                        ActiveObject.CollectData();
+                        ActiveObject.ComputeData();
+                        return true;
+                    });
+                }
             }
             catch (Exception ex)
             {
