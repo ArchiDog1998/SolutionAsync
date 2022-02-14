@@ -9,11 +9,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using SolutionAsync.WPF;
+using System.IO;
+using System.Web.Script.Serialization;
 
 namespace SolutionAsync
 {
     public class SolutionAsyncLoad : GH_AssemblyPriority
     {
+        internal static List<Guid> NoAsyncObjs = new List<Guid>();
+        private static readonly string _location = Path.Combine(Folders.SettingsFolder, "skipAsyncObjs.json");
         public static bool UseSolutionAsync
         {
             get => Instances.Settings.GetValue(nameof(UseSolutionAsync), true);
@@ -56,9 +61,46 @@ namespace SolutionAsync
             }
             DoingSomethingFirst(editor);
         }
-
+        internal static void SaveToJson()
+        {
+            JavaScriptSerializer ser = new JavaScriptSerializer() { MaxJsonLength = int.MaxValue };
+            try
+            {
+                File.WriteAllText(_location, ser.Serialize(NoAsyncObjs));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Json Library Save Failed");
+            }
+        }
         private void DoingSomethingFirst(GH_DocumentEditor editor)
         {
+            //Read from json.
+            try
+            {
+                if (File.Exists(_location))
+                {
+                    string jsonStr = File.ReadAllText(_location);
+                    JavaScriptSerializer ser = new JavaScriptSerializer() { MaxJsonLength = int.MaxValue };
+                    try
+                    {
+                        NoAsyncObjs = ser.Deserialize<List<Guid>>(jsonStr);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "Json Library Load Failed");
+                    }
+                }
+                else
+                {
+                    NoAsyncObjs = new List<Guid>();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+
             GH_DocumentReplacer.ChangeFunction();
             Instances.ActiveCanvas.KeyDown += ActiveCanvas_KeyDown;
 
@@ -70,26 +112,40 @@ namespace SolutionAsync
             _canvasToolbar.Items.Add(toolStripSeparator);
 
 
-            ToolStripButton useButton = new ToolStripButton(Properties.Resources.UseChangeLevelIcon_24)
+            ToolStripMenuItem useOrderChangeButton = new ToolStripMenuItem("Change Solution Order", Properties.Resources.UseChangeLevelIcon_24)
             {
                 Checked = UseSolutionOrderedLevelAsync,
                 Enabled = UseSolutionAsync,
                 ToolTipText = "Change object's solution order to make Calculate much Faster.",
             };
-            useButton.Click += (sender, e) =>
+            useOrderChangeButton.Click += (sender, e) =>
             {
-                UseSolutionOrderedLevelAsync = useButton.Checked = !useButton.Checked;
+                UseSolutionOrderedLevelAsync = useOrderChangeButton.Checked = !useOrderChangeButton.Checked;
             };
 
-            ToolStripButton openButton = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
+            ToolStripButton openSolutionButton = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
             { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use Solution Async." };
-            openButton.Click += (sender, e) =>
+            ToolStripMenuItem major = new ToolStripMenuItem("Solution Async", Properties.Resources.SolutionAsyncIcon_24) { Checked = UseSolutionAsync };
+
+            major.Click += (sender, e) =>
             {
-                UseSolutionAsync = useButton.Enabled = openButton.Checked = !openButton.Checked;
+                UseSolutionAsync = useOrderChangeButton.Enabled = openSolutionButton.Checked = major.Checked = !major.Checked;
+            };
+            openSolutionButton.Click += (sender, e) =>
+            {
+                UseSolutionAsync = useOrderChangeButton.Enabled = openSolutionButton.Checked = major.Checked = !openSolutionButton.Checked;
             };
 
-            _canvasToolbar.Items.Add(openButton);
-            _canvasToolbar.Items.Add(useButton);
+            _canvasToolbar.Items.Add(openSolutionButton);
+
+            major.DropDownItems.Add(useOrderChangeButton);
+            major.DropDownItems.Add(new ToolStripMenuItem("Open Skip Async Window", null, (sender, e)=>
+            {
+                new SkipAsyncWindow().Show();
+            }));
+
+
+            ((ToolStripMenuItem)editor.MainMenuStrip.Items[4]).DropDownItems.Insert(6, major);
         }
 
         private void ActiveCanvas_KeyDown(object sender, KeyEventArgs e)

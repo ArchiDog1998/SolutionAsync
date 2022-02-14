@@ -23,9 +23,9 @@ namespace SolutionAsync
         {
             _nodes.Add(node);
         }
-        internal async Task SolveOneLevel()
+        internal async Task SolveOneLevel(DocumentTask doc)
         {
-            await Task.WhenAll(_nodes.Select(no => no.SolveOneObject()).ToArray());
+            await Task.WhenAll(_nodes.Select(no => no.SolveOneObject(doc)).ToArray());
             Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
             {
                 Instances.ActiveCanvas.Refresh();
@@ -35,7 +35,7 @@ namespace SolutionAsync
         {
             foreach (var node in _nodes)
             {
-                node.ActiveObject.ClearData();
+                node.ActiveObject.ExpireSolution(false);
             }
         }
         internal static Calculatelevel[] CrateLevels(List<IGH_ActiveObject> objs, List<Action> indexes, bool Calculate, SortedList<Guid, bool> ignoreList, GH_SolutionMode mode)

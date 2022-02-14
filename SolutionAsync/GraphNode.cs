@@ -17,12 +17,7 @@ namespace SolutionAsync
 {
     internal class GraphNode
     {
-        private static readonly List<Guid> _noAsyncObj = new List<Guid>()
-        {
-            new Guid("92c0e67c-7332-4de6-82a0-f8603b819baf"),
-        };
-
-        private bool UseBackTask => !_noAsyncObj.Contains(ActiveObject.ComponentGuid);
+        private bool UseBackTask => !SolutionAsyncLoad.NoAsyncObjs.Contains(ActiveObject.ComponentGuid);
         public IGH_ActiveObject ActiveObject { get; }
         private Action _setIndex;
         /// <summary>
@@ -101,7 +96,7 @@ namespace SolutionAsync
             }
         }
 
-        internal async Task SolveOneObject()
+        internal async Task SolveOneObject(DocumentTask doc)
         {
             _setIndex.Invoke();
             try
@@ -113,17 +108,17 @@ namespace SolutionAsync
 
                 if (UseBackTask)
                 {
-                    GH_DocumentReplacer.LastCalculate = ActiveObject;
+                    doc.LastCalculate = ActiveObject;
                     await Task.Run(() =>
                     {
-                        ActiveObject.CollectData();
                         try
                         {
+                            ActiveObject.CollectData();
                             ActiveObject.ComputeData();
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show(Instances.DocumentEditor, ex.Message);
+                            MessageBox.Show(Instances.DocumentEditor, ex.Message, "SolutionAsync Warning!");
                         }
                     });
                 }
