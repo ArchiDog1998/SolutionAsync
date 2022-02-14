@@ -104,6 +104,7 @@ namespace SolutionAsync
 
             uint computeId = AddACalculate();
 
+            //Wait for calculating.
             while (_isCalculating)
             {
                 await Task.Delay(100);
@@ -119,7 +120,7 @@ namespace SolutionAsync
 
             if (Document.Enabled && Document.SolutionState != GH_ProcessStep.Process)
             {
-                DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PreProcess);
+                _stateInfo.SetValue(Document, GH_ProcessStep.PreProcess);
                 if (expireAllObjects)
                 {
                     _solutionExpireAllInfo.Invoke(Document, new object[] { });
@@ -128,7 +129,7 @@ namespace SolutionAsync
 
                 if (SolutionAsyncLoad.UseSolutionAsync && Document == Instances.ActiveCanvas.Document)
                 {
-                    DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+                    _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
                     try
                     {
                         await SolveAllObjects(mode, computeId);
@@ -147,9 +148,9 @@ namespace SolutionAsync
                 }
                 else
                 {
+                    _stateInfo.SetValue(Document, GH_ProcessStep.Process);
                     try
                     {
-                        DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.Process);
                         _solveAllObjInfo.Invoke(Document, new object[] { mode });
                     }
                     catch (Exception ex)
@@ -178,7 +179,7 @@ namespace SolutionAsync
                 _solutionProfiledInfo.Invoke(Document, new object[] { now, profiler });
             }
 
-            DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+            _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
             _solutionCleanUpInfo.Invoke(Document, new object[] { });
             _solutionEndInfo.Invoke(Document, new object[] { now });
             _solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
@@ -211,20 +212,21 @@ namespace SolutionAsync
             for (int i = 0; i < levels.Length; i++)
             {
                 Calculatelevel level = levels[i];
+
+                await level.SolveOneLevel(this);
+
+                if (_count != id)
+                {
+                    level.ClearLevel();
+                    break;
+                }
+
                 if (_ManualCancel)
                 {
                     _abordInfo.SetValue(Document, true);
                 }
                 if (Document.AbortRequested)
                 {
-                    break;
-                }
-
-                await level.SolveOneLevel(this);
-
-                if (_count != id)
-                {
-                    levels[i].ClearLevel();
                     break;
                 }
             }
