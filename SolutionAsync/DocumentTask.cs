@@ -16,6 +16,11 @@ namespace SolutionAsync
 {
     internal class DocumentTask
     {
+        private class Calculator
+        {
+
+        }
+
         #region SolveAllObjects Field
         internal static readonly FieldInfo _stateInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("_state")).First();
         private static readonly FieldInfo _abordInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_abortRequested")).First();
@@ -49,7 +54,7 @@ namespace SolutionAsync
         private bool _ManualCancel = false;
         private bool _isCalculating = false;
 
-        private uint _count = 0;
+        uint calculatingCount = 0;
 
         public DocumentTask(GH_Document doc)
         {
@@ -58,20 +63,19 @@ namespace SolutionAsync
 
         private uint AddACalculate()
         {
-            //Add a count.
-            _count++;
+            calculatingCount++;
 
             Instances.ActiveCanvas.BeginInvoke((MethodInvoker)delegate
             {
                 Instances.ActiveCanvas.Refresh();
             });
 
-            //Return right count.
-            return _count;
+            return calculatingCount;
         }
 
         internal async Task Compute(bool expireAllObjects, GH_SolutionMode mode)
         {
+
             _ManualCancel = false;
             await MyNewSolution(expireAllObjects, mode);
         }
@@ -100,7 +104,10 @@ namespace SolutionAsync
             while (_isCalculating)
             {
                 await Task.Delay(100);
-                if (_count > computeId) return;
+                if (calculatingCount > computeId)
+                {
+                    return;
+                }
             }
 
             _isCalculating = true;
@@ -177,6 +184,7 @@ namespace SolutionAsync
             _solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
             _solutionTriggerInfo.Invoke(Document, new object[] { mode });
             _isCalculating = false;
+
         }
 
         private async Task SolveAllObjects(GH_SolutionMode mode, uint id)
@@ -201,14 +209,16 @@ namespace SolutionAsync
                 Calculatelevel.CrateLevels(objList, setIndexList, SolutionAsyncLoad.UseSolutionOrderedLevelAsync, ignoreList, mode));
             Calculatelevel[] levels = getLevels.Result;
 
+            bool isCalculateSuccessfully = true;
             for (int i = 0; i < levels.Length; i++)
             {
                 Calculatelevel level = levels[i];
 
                 await level.SolveOneLevel(this);
 
-                if (_count != id)
+                if (calculatingCount > id)
                 {
+                    isCalculateSuccessfully = false;
                     level.ClearLevel();
                     break;
                 }
@@ -230,6 +240,7 @@ namespace SolutionAsync
             else
             {
                 _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+                if(isCalculateSuccessfully) calculatingCount = 0;
             }
         }
     }
