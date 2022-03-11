@@ -19,6 +19,7 @@ namespace SolutionAsync
 {
     public static class GH_DocumentReplacer
     {
+        private static Task<DocumentTask> _workTask = Task.Run(()=> default(DocumentTask));
 		private static readonly List<DocumentTask> _documentTasks = new List<DocumentTask>();
 
         internal static void ChangeFunction()
@@ -67,12 +68,15 @@ namespace SolutionAsync
                 Instances.RedrawCanvas();
                 RhinoDoc.ActiveDoc?.Views.Redraw();
             });
-
         }
 
         private static async void MyNewSolution(this GH_Document Document, bool expireAllObjects, GH_SolutionMode mode)
         {
-            await FindTask(Document).Compute(expireAllObjects, mode);
+            _workTask = _workTask.ContinueWith(task =>
+            {
+                return FindTask(Document);
+            });
+            await _workTask.Result.Compute(expireAllObjects, mode);
         }
 
         private static DocumentTask FindTask(GH_Document doc)

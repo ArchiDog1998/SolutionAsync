@@ -49,14 +49,6 @@ namespace SolutionAsync
         private bool _ManualCancel = false;
         private bool _isCalculating = false;
 
-        ///// <summary>
-        ///// Contain the right task.
-        ///// </summary>
-        //private Task _task = Task.CompletedTask;
-
-        /// <summary>
-        /// Record the calculate count.
-        /// </summary>
         private uint _count = 0;
 
         public DocumentTask(GH_Document doc)
