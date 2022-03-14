@@ -23,6 +23,6 @@ namespace SolutionAsync
         //Return a string representing your preferred contact details.
         public override string AuthorContact => "201704110219@stu.zafu.edu.cn";
 
-        public override string Version => "0.9.3";
+        public override string Version => "1.0.0";
     }
 }
