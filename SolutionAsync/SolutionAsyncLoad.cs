@@ -22,7 +22,14 @@ namespace SolutionAsync
         public static bool UseSolutionAsync
         {
             get => Instances.Settings.GetValue(nameof(UseSolutionAsync), true);
-            set => Instances.Settings.SetValue(nameof(UseSolutionAsync), value);
+            set
+            {
+                Instances.Settings.SetValue(nameof(UseSolutionAsync), value);
+                if (!value)
+                {
+                    GH_DocumentReplacer.CancelDocuments();
+                }
+            }
         }
         public static bool UseSolutionOrderedLevelAsync
         {

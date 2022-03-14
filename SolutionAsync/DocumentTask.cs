@@ -83,8 +83,9 @@ namespace SolutionAsync
         internal void AbortCompute()
         {
             _ManualCancel = true;
-            Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" received Cancel solution Command.",
-                GH_RuntimeMessageLevel.Remark));
+            if (_isCalculating)
+                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" received Cancel solution Command.",
+                    GH_RuntimeMessageLevel.Remark));
         }
         private async Task MyNewSolution(bool expireAllObjects, GH_SolutionMode mode)
         {

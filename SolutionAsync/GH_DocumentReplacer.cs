@@ -105,5 +105,13 @@ namespace SolutionAsync
 				}
             }
         }
-	}
+
+        internal static void CancelDocuments()
+        {
+            foreach (var task in _documentTasks)
+            {
+                task.AbortCompute();
+            }
+        }
+    }
 }
