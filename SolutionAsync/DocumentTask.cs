@@ -16,11 +16,6 @@ namespace SolutionAsync
 {
     internal class DocumentTask
     {
-        private class Calculator
-        {
-
-        }
-
         #region SolveAllObjects Field
         internal static readonly FieldInfo _stateInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("_state")).First();
         private static readonly FieldInfo _abordInfo = typeof(GH_Document).GetRuntimeFields().Where(info => info.Name.Contains("m_abortRequested")).First();
@@ -50,7 +45,6 @@ namespace SolutionAsync
         internal IGH_ActiveObject LastCalculate {private get; set; }
         public GH_Document Document { get; }
 
-        //private bool _recomputeAbort = false;
         private bool _ManualCancel = false;
         private bool _isCalculating = false;
 
