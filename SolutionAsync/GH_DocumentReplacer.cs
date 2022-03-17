@@ -26,8 +26,8 @@ namespace SolutionAsync
         {
             ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyNewSolution))).First(),
 				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolution") && info.GetParameters().Length == 2).First());
-            ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyRedrawAll))).First(),
-                typeof(Instances).GetRuntimeMethods().Where(info => info.Name.Contains("RedrawAll")).First());
+            //ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyRedrawAll))).First(),
+            //    typeof(Instances).GetRuntimeMethods().Where(info => info.Name.Contains("RedrawAll")).First());
 
         }
 
@@ -61,14 +61,14 @@ namespace SolutionAsync
             return true;
         }
 
-        public static void MyRedrawAll()
-        {
-            Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
-            {
-                Instances.RedrawCanvas();
-                RhinoDoc.ActiveDoc?.Views.Redraw();
-            });
-        }
+        //public static void MyRedrawAll()
+        //{
+        //    Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
+        //    {
+        //        Instances.RedrawCanvas();
+        //        RhinoDoc.ActiveDoc?.Views.Redraw();
+        //    });
+        //}
 
         private static async void MyNewSolution(this GH_Document Document, bool expireAllObjects, GH_SolutionMode mode)
         {
@@ -76,7 +76,9 @@ namespace SolutionAsync
             {
                 return FindTask(Document);
             });
+
             await _workTask.Result.Compute(expireAllObjects, mode);
+
         }
 
         private static DocumentTask FindTask(GH_Document doc)

@@ -69,20 +69,8 @@ namespace SolutionAsync
 
         internal async Task Compute(bool expireAllObjects, GH_SolutionMode mode)
         {
-
             _ManualCancel = false;
-            await MyNewSolution(expireAllObjects, mode);
-        }
 
-        internal void AbortCompute()
-        {
-            _ManualCancel = true;
-            if (_isCalculating)
-                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" received Cancel solution Command.",
-                    GH_RuntimeMessageLevel.Remark));
-        }
-        private async Task MyNewSolution(bool expireAllObjects, GH_SolutionMode mode)
-        {
             if ((bool)_disposeInfo.GetValue(Document))
             {
                 return;
@@ -124,6 +112,7 @@ namespace SolutionAsync
                 if (SolutionAsyncLoad.UseSolutionAsync && Document == Instances.ActiveCanvas.Document)
                 {
                     _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
+
                     try
                     {
                         await SolveAllObjects(mode, computeId);
@@ -142,10 +131,11 @@ namespace SolutionAsync
                 }
                 else
                 {
-                    _stateInfo.SetValue(Document, GH_ProcessStep.Process);
+                    DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.Process);
+
                     try
                     {
-                        _solveAllObjInfo.Invoke(Document, new object[] { mode });
+                        DocumentTask._solveAllObjInfo.Invoke(Document, new object[] { mode });
                     }
                     catch (Exception ex)
                     {
@@ -167,19 +157,26 @@ namespace SolutionAsync
                         }
                         ProjectData.ClearProjectError();
                     }
-
                 }
+
                 _solutionEndUndoInfo.Invoke(Document, new object[] { id });
                 _solutionProfiledInfo.Invoke(Document, new object[] { now, profiler });
             }
-
             _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
             _solutionCleanUpInfo.Invoke(Document, new object[] { });
             _solutionEndInfo.Invoke(Document, new object[] { now });
             _solutionCompletionMessagingInfo.Invoke(Document, new object[] { mode });
             _solutionTriggerInfo.Invoke(Document, new object[] { mode });
             _isCalculating = false;
+        }
 
+
+        internal void AbortCompute()
+        {
+            _ManualCancel = true;
+            if (_isCalculating)
+                Instances.DocumentEditor.SetStatusBarEvent(new GH_RuntimeMessage($"Document \"{Document.DisplayName}\" received Cancel solution Command.",
+                    GH_RuntimeMessageLevel.Remark));
         }
 
         private async Task SolveAllObjects(GH_SolutionMode mode, uint id)
