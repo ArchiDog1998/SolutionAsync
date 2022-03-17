@@ -28,7 +28,6 @@ namespace SolutionAsync
 				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolution") && info.GetParameters().Length == 2).First());
             //ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyRedrawAll))).First(),
             //    typeof(Instances).GetRuntimeMethods().Where(info => info.Name.Contains("RedrawAll")).First());
-
         }
 
         internal static bool ExchangeMethod(MethodInfo targetMethod, MethodInfo injectMethod)
