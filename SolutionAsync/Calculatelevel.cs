@@ -26,6 +26,9 @@ namespace SolutionAsync
         internal async Task SolveOneLevel(DocumentTask doc)
         {
             await Task.WhenAll(_nodes.Select(no => no.SolveOneObject(doc)).ToArray());
+
+            if (!SolutionAsyncLoad.RefreshEveryLevelDuringAsync) return;
+
             Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
             {
                 Instances.ActiveCanvas.Refresh();
@@ -38,7 +41,7 @@ namespace SolutionAsync
                 node.ActiveObject.ExpireSolution(false);
             }
         }
-        internal static Calculatelevel[] CrateLevels(List<IGH_ActiveObject> objs, List<Action> indexes, bool Calculate, SortedList<Guid, bool> ignoreList, GH_SolutionMode mode)
+        internal static Calculatelevel[] CreateLevels(List<IGH_ActiveObject> objs, List<Action> indexes, bool Calculate, SortedList<Guid, bool> ignoreList, GH_SolutionMode mode)
         {
             GraphNode[] nodes = new GraphNode[objs.Count];
             for (int i = 0; i < objs.Count; i++)

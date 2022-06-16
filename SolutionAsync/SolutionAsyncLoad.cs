@@ -31,6 +31,12 @@ namespace SolutionAsync
                 }
             }
         }
+
+        public static bool RefreshEveryLevelDuringAsync
+        {
+            get => Instances.Settings.GetValue(nameof(RefreshEveryLevelDuringAsync), false);
+            set => Instances.Settings.SetValue(nameof(RefreshEveryLevelDuringAsync), value);
+        }
         public static bool UseSolutionOrderedLevelAsync
         {
             get => Instances.Settings.GetValue(nameof(UseSolutionOrderedLevelAsync), true);
@@ -130,22 +136,34 @@ namespace SolutionAsync
                 UseSolutionOrderedLevelAsync = useOrderChangeButton.Checked = !useOrderChangeButton.Checked;
             };
 
+            ToolStripMenuItem refreshLevels = new ToolStripMenuItem("Refresh Canvas")
+            {
+                Checked = RefreshEveryLevelDuringAsync,
+                Enabled = UseSolutionAsync,
+                ToolTipText = "Refresh Canvas every time.",
+            };
+            refreshLevels.Click += (sender, e) =>
+            {
+                RefreshEveryLevelDuringAsync = refreshLevels.Checked = !refreshLevels.Checked;
+            };
+
             ToolStripButton openSolutionButton = new ToolStripButton(Properties.Resources.SolutionAsyncIcon_24)
             { Checked = UseSolutionAsync, ToolTipText = "Choose whether to use Solution Async." };
             ToolStripMenuItem major = new ToolStripMenuItem("Solution Async", Properties.Resources.SolutionAsyncIcon_24) { Checked = UseSolutionAsync };
 
             major.Click += (sender, e) =>
             {
-                UseSolutionAsync = useOrderChangeButton.Enabled = openSolutionButton.Checked = major.Checked = !major.Checked;
+                UseSolutionAsync = refreshLevels.Enabled = useOrderChangeButton.Enabled = openSolutionButton.Checked = major.Checked = !major.Checked;
             };
             openSolutionButton.Click += (sender, e) =>
             {
-                UseSolutionAsync = useOrderChangeButton.Enabled = openSolutionButton.Checked = major.Checked = !openSolutionButton.Checked;
+                UseSolutionAsync = refreshLevels.Enabled = useOrderChangeButton.Enabled = openSolutionButton.Checked = major.Checked = !openSolutionButton.Checked;
             };
 
             _canvasToolbar.Items.Add(openSolutionButton);
 
             major.DropDownItems.Add(useOrderChangeButton);
+            major.DropDownItems.Add(refreshLevels);
             major.DropDownItems.Add(new ToolStripMenuItem("Open Skip Async Window", null, (sender, e)=>
             {
                 new SkipAsyncWindow().Show();

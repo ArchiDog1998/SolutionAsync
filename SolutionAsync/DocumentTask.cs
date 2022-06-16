@@ -198,7 +198,7 @@ namespace SolutionAsync
 
             //Get Graph
             Task<Calculatelevel[]> getLevels = Task<Calculatelevel[]>.Run(() =>
-                Calculatelevel.CrateLevels(objList, setIndexList, SolutionAsyncLoad.UseSolutionOrderedLevelAsync, ignoreList, mode));
+                Calculatelevel.CreateLevels(objList, setIndexList, SolutionAsyncLoad.UseSolutionOrderedLevelAsync, ignoreList, mode));
             Calculatelevel[] levels = getLevels.Result;
 
             bool isCalculateSuccessfully = true;
