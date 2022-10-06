@@ -106,6 +106,9 @@ namespace SolutionAsync
                     return;
                 }
 
+                SolutionAsyncLoad.ComputingObjects.Add(ActiveObject);
+                Instances.ActiveCanvas.Refresh();
+
                 if (UseBackTask)
                 {
                     doc.LastCalculate = ActiveObject;
@@ -131,6 +134,9 @@ namespace SolutionAsync
                         return true;
                     });
                 }
+                SolutionAsyncLoad.ComputingObjects.Remove(ActiveObject);
+                Instances.ActiveCanvas.Refresh();
+
             }
             catch (Exception ex)
             {

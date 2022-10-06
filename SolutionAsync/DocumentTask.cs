@@ -234,6 +234,7 @@ namespace SolutionAsync
                 _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
                 if(isCalculateSuccessfully) calculatingCount = 0;
             }
+            SolutionAsyncLoad.ComputingObjects.Clear();
         }
     }
 }

@@ -12,12 +12,14 @@ using System.Windows.Forms;
 using SolutionAsync.WPF;
 using System.IO;
 using System.Web.Script.Serialization;
+using System.Windows.Media.Animation;
 
 namespace SolutionAsync
 {
     public class SolutionAsyncLoad : GH_AssemblyPriority
     {
         internal static List<Guid> NoAsyncObjs = new List<Guid>();
+        internal static List<IGH_ActiveObject> ComputingObjects = new List<IGH_ActiveObject>();
         private static readonly string _location = Path.Combine(Folders.SettingsFolder, "skipAsyncObjs.json");
         public static bool UseSolutionAsync
         {
@@ -171,6 +173,27 @@ namespace SolutionAsync
 
 
             ((ToolStripMenuItem)editor.MainMenuStrip.Items[4]).DropDownItems.Insert(6, major);
+
+            Instances.ActiveCanvas.CanvasPrePaintOverlay += ActiveCanvas_CanvasPrePaintOverlay;
+        }
+
+        private void ActiveCanvas_CanvasPrePaintOverlay(GH_Canvas sender)
+        {
+            if (!sender.IsDocument) return;
+            var doc = sender.Document;
+
+            foreach (var item in ComputingObjects)
+            {
+                string showStr = "Computing...";
+
+                if(item is IGH_Component component && component.RunCount >= 0)
+                {
+                    showStr = $"Run {component.RunCount} times.";
+                }
+
+                sender.Graphics.DrawString(showStr, GH_FontServer.StandardBold, new SolidBrush(Color.DarkGreen), 
+                    new PointF(item.Attributes.Bounds.Left, item.Attributes.Bounds.Bottom));
+            }
         }
 
         private void ActiveCanvas_KeyDown(object sender, KeyEventArgs e)
