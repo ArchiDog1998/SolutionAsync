@@ -138,11 +138,11 @@ namespace SolutionAsync
                 UseSolutionOrderedLevelAsync = useOrderChangeButton.Checked = !useOrderChangeButton.Checked;
             };
 
-            ToolStripMenuItem refreshLevels = new ToolStripMenuItem("Refresh Canvas")
+            ToolStripMenuItem refreshLevels = new ToolStripMenuItem("Refresh Views")
             {
                 Checked = RefreshEveryLevelDuringAsync,
                 Enabled = UseSolutionAsync,
-                ToolTipText = "Refresh Canvas every time.",
+                ToolTipText = "Refresh Views every time.",
             };
             refreshLevels.Click += (sender, e) =>
             {

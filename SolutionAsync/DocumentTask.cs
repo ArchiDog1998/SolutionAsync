@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.VisualBasic.CompilerServices;
 using Rhino;
+using Microsoft.VisualBasic.Devices;
 
 namespace SolutionAsync
 {
@@ -41,30 +42,35 @@ namespace SolutionAsync
 
         #endregion
 
-
         internal IGH_ActiveObject LastCalculate {private get; set; }
         public GH_Document Document { get; }
 
         private bool _ManualCancel = false;
         private bool _isCalculating = false;
 
-        uint calculatingCount = 0;
+        ulong aboutCalculatingCount = 0;
+        ulong rightCalculateingCount = 0;
 
         public DocumentTask(GH_Document doc)
         {
             Document = doc;
         }
 
-        private uint AddACalculate()
+        private ulong AddACalculate()
         {
-            calculatingCount++;
+            aboutCalculatingCount++;
 
             Instances.ActiveCanvas.BeginInvoke((MethodInvoker)delegate
             {
                 Instances.ActiveCanvas.Refresh();
             });
 
-            return calculatingCount;
+            return aboutCalculatingCount;
+        }
+
+        public bool IsQuitCalculate()
+        {
+            return aboutCalculatingCount > rightCalculateingCount;
         }
 
         internal async Task Compute(bool expireAllObjects, GH_SolutionMode mode)
@@ -81,19 +87,20 @@ namespace SolutionAsync
                 return;
             }
 
-            uint computeId = AddACalculate();
+            var calculateId = AddACalculate();
 
             //Wait for calculating.
             while (_isCalculating)
             {
                 await Task.Delay(100);
-                if (calculatingCount > computeId)
+                if (aboutCalculatingCount > calculateId)
                 {
                     return;
                 }
             }
 
             _isCalculating = true;
+            rightCalculateingCount = aboutCalculatingCount;
             _solutionSetupInfo.Invoke(Document, new object[] { });
             DateTime now = DateTime.Now;
             Stopwatch profiler = (Stopwatch)_solutionProfilerInfo.Invoke(Document, new object[] { });
@@ -115,7 +122,7 @@ namespace SolutionAsync
 
                     try
                     {
-                        await SolveAllObjects(mode, computeId);
+                        await SolveAllObjects(mode, calculateId);
                     }
                     catch (Exception ex)
                     {
@@ -179,7 +186,7 @@ namespace SolutionAsync
                     GH_RuntimeMessageLevel.Remark));
         }
 
-        private async Task SolveAllObjects(GH_SolutionMode mode, uint id)
+        private async Task SolveAllObjects(GH_SolutionMode mode, ulong id)
         {
             _solutionIndexInfo.SetValue(Document, -1);
             List<IGH_ActiveObject> objList = new List<IGH_ActiveObject>(Document.ObjectCount);
@@ -206,9 +213,10 @@ namespace SolutionAsync
             {
                 Calculatelevel level = levels[i];
 
+                rightCalculateingCount = id;
                 await level.SolveOneLevel(this);
 
-                if (calculatingCount > id)
+                if (aboutCalculatingCount > id)
                 {
                     isCalculateSuccessfully = false;
                     level.ClearLevel();
@@ -232,7 +240,7 @@ namespace SolutionAsync
             else
             {
                 _stateInfo.SetValue(Document, GH_ProcessStep.PostProcess);
-                if(isCalculateSuccessfully) calculatingCount = 0;
+                if(isCalculateSuccessfully) aboutCalculatingCount = 0;
             }
             SolutionAsyncLoad.ComputingObjects.Clear();
         }

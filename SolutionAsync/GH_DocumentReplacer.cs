@@ -14,6 +14,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Xml.Linq;
 
 namespace SolutionAsync
 {
@@ -26,8 +28,9 @@ namespace SolutionAsync
         {
             ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyNewSolution))).First(),
 				typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("NewSolution") && info.GetParameters().Length == 2).First());
-            //ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(MyRedrawAll))).First(),
-            //    typeof(Instances).GetRuntimeMethods().Where(info => info.Name.Contains("RedrawAll")).First());
+
+            ExchangeMethod(typeof(GH_DocumentReplacer).GetRuntimeMethods().Where(info => info.Name.Contains(nameof(IsEscapeKeyDown))).First(),
+                typeof(GH_Document).GetRuntimeMethods().Where(info => info.Name.Contains("IsEscapeKeyDown")).First());
         }
 
         internal static bool ExchangeMethod(MethodInfo targetMethod, MethodInfo injectMethod)
@@ -77,7 +80,6 @@ namespace SolutionAsync
             });
 
             await _workTask.Result.Compute(expireAllObjects, mode);
-
         }
 
         private static DocumentTask FindTask(GH_Document doc)
@@ -114,5 +116,130 @@ namespace SolutionAsync
                 task.AbortCompute();
             }
         }
+
+        private static FieldInfo _initInfo = typeof(GH_Document).GetRuntimeFields().First(m => m.Name.Contains("$STATIC$IsEscapeKeyDown$002$lastCheck$Init"));
+        private static FieldInfo _checkInfo = typeof(GH_Document).GetRuntimeFields().First(m => m.Name.Contains("$STATIC$IsEscapeKeyDown$002$lastCheck"));
+        private static Dictionary<IGH_Component, int> Runcount = new Dictionary<IGH_Component, int>();
+        private static bool ShouldEscape()
+        {
+            //Stop for new solution.
+            if (Instances.ActiveCanvas.IsDocument)
+            {
+                foreach (var task in _documentTasks)
+                {
+                    if (task.Document == Instances.ActiveCanvas.Document)
+                    {
+                        return task.IsQuitCalculate();
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static bool ShouldUpdateViews()
+        {
+            var runCount = new Dictionary<IGH_Component, int>();
+
+            bool shouldUpdate = false;
+            foreach (var obj in SolutionAsyncLoad.ComputingObjects)
+            {
+                if(obj is IGH_Component com)
+                {
+                    runCount[com] = com.RunCount;
+
+                    if (!shouldUpdate && Runcount.TryGetValue(com, out var i))
+                    {
+                        shouldUpdate = i != com.RunCount;
+                    }
+                }
+            }
+
+            Runcount = runCount;
+
+            return shouldUpdate;
+        }
+
+        public static void UpdateViews()
+        {
+            Instances.DocumentEditor.Invoke((Action)(() =>
+            {
+                Instances.ActiveCanvas.Refresh();
+
+                if (!SolutionAsyncLoad.RefreshEveryLevelDuringAsync) return;
+
+                RhinoDoc.ActiveDoc.Views.Redraw();
+            }));
+        }
+
+        public static bool IsEscapeKeyDown()
+        {
+            if (ShouldUpdateViews()) UpdateViews();
+
+            if (ShouldEscape()) return true;
+
+            var init = _initInfo.GetValue(null) as StaticLocalInitFlag;
+            var lastCheck = (DateTime)_checkInfo.GetValue(null);
+            if (init == null)
+            {
+                Interlocked.CompareExchange(ref init, new StaticLocalInitFlag(), null);
+                _initInfo.SetValue(null, init);
+            }
+            bool lockTaken = false;
+            try
+            {
+                Monitor.Enter(init, ref lockTaken);
+                if (init.State == 0)
+                {
+                    init.State = 2;
+                    _initInfo.SetValue(null, init);
+                    lastCheck = DateTime.MinValue;
+                }
+
+                else if (init.State == 2)
+                {
+                    throw new IncompleteInitialization();
+                }
+            }
+            finally
+            {
+                init.State = 1;
+                _initInfo.SetValue(null, init);
+                if (lockTaken)
+                {
+                    Monitor.Exit(init);
+                }
+            }
+            DateTime utcNow = DateTime.UtcNow;
+            if ((utcNow - lastCheck).TotalMilliseconds < 250.0)
+            {
+                return false;
+            }
+            lastCheck = utcNow;
+            _checkInfo.SetValue(null, lastCheck);
+
+
+            if (GetAsyncKeyState(Keys.Escape) < 0)
+            {
+                IntPtr foregroundWindow = GetForegroundWindow();
+                if (foregroundWindow == IntPtr.Zero)
+                {
+                    return false;
+                }
+                uint lpdwProcessId = default(uint);
+                GetWindowThreadProcessId(foregroundWindow, ref lpdwProcessId);
+                return Process.GetCurrentProcess().Id == lpdwProcessId;
+            }
+            return false;
+        }
+
+        [DllImport("user32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        private static extern short GetAsyncKeyState(Keys virtualkey);
+
+        [DllImport("user32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        private static extern IntPtr GetForegroundWindow();
+
+
+        [DllImport("user32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, ref uint lpdwProcessId);
     }
 }

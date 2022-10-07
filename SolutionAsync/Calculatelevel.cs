@@ -26,13 +26,6 @@ namespace SolutionAsync
         internal async Task SolveOneLevel(DocumentTask doc)
         {
             await Task.WhenAll(_nodes.Select(no => no.SolveOneObject(doc)).ToArray());
-
-            if (!SolutionAsyncLoad.RefreshEveryLevelDuringAsync) return;
-
-            Instances.DocumentEditor.BeginInvoke((MethodInvoker)delegate
-            {
-                Instances.ActiveCanvas.Refresh();
-            });
         }
         internal void ClearLevel()
         {

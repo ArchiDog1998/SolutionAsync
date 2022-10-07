@@ -135,7 +135,7 @@ namespace SolutionAsync
                     });
                 }
                 SolutionAsyncLoad.ComputingObjects.Remove(ActiveObject);
-                Instances.ActiveCanvas.Refresh();
+                GH_DocumentReplacer.UpdateViews();
 
             }
             catch (Exception ex)
