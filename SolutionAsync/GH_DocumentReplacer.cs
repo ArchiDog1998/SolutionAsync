@@ -159,8 +159,13 @@ namespace SolutionAsync
             return shouldUpdate;
         }
 
+        static DateTime lastUpdate = DateTime.MinValue;
         public static void UpdateViews()
         {
+            if (DateTime.Now - lastUpdate <= new TimeSpan(0, 0, 0, 0, 200)) return;
+
+            lastUpdate = DateTime.Now;
+
             Instances.DocumentEditor.Invoke((Action)(() =>
             {
                 Instances.ActiveCanvas.Refresh();
