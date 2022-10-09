@@ -119,7 +119,6 @@ namespace SolutionAsync
 
         private static FieldInfo _initInfo = typeof(GH_Document).GetRuntimeFields().First(m => m.Name.Contains("$STATIC$IsEscapeKeyDown$002$lastCheck$Init"));
         private static FieldInfo _checkInfo = typeof(GH_Document).GetRuntimeFields().First(m => m.Name.Contains("$STATIC$IsEscapeKeyDown$002$lastCheck"));
-        private static Dictionary<IGH_Component, int> Runcount = new Dictionary<IGH_Component, int>();
         private static bool ShouldEscape()
         {
             //Stop for new solution.
@@ -134,29 +133,6 @@ namespace SolutionAsync
                 }
             }
             return false;
-        }
-
-        private static bool ShouldUpdateViews()
-        {
-            var runCount = new Dictionary<IGH_Component, int>();
-
-            bool shouldUpdate = false;
-            foreach (var obj in SolutionAsyncLoad.ComputingObjects)
-            {
-                if(obj is IGH_Component com)
-                {
-                    runCount[com] = com.RunCount;
-
-                    if (!shouldUpdate && Runcount.TryGetValue(com, out var i))
-                    {
-                        shouldUpdate = i != com.RunCount;
-                    }
-                }
-            }
-
-            Runcount = runCount;
-
-            return shouldUpdate;
         }
 
         static DateTime lastUpdate = DateTime.MinValue;
@@ -178,7 +154,7 @@ namespace SolutionAsync
 
         public static bool IsEscapeKeyDown()
         {
-            if (ShouldUpdateViews()) UpdateViews();
+            UpdateViews();
 
             if (ShouldEscape()) return true;
 

@@ -214,7 +214,15 @@ namespace SolutionAsync
                 Calculatelevel level = levels[i];
 
                 rightCalculateingCount = id;
-                await level.SolveOneLevel(this);
+
+                if (!await level.SolveOneLevel(this))
+                {
+                    isCalculateSuccessfully = false;
+                    level.ClearLevel();
+
+                    Document.ScheduleSolution(20);
+                    break;
+                }
 
                 if (aboutCalculatingCount > id)
                 {

@@ -96,34 +96,39 @@ namespace SolutionAsync
             }
         }
 
-        internal async Task SolveOneObject(DocumentTask doc)
+        internal async Task<bool> SolveOneObject(DocumentTask doc)
         {
             _setIndex.Invoke();
             try
             {
                 if (ActiveObject.Phase == GH_SolutionPhase.Computed)
                 {
-                    return;
+                    return false;
                 }
 
                 SolutionAsyncLoad.ComputingObjects.Add(ActiveObject);
-                Instances.ActiveCanvas.Refresh();
+                GH_DocumentReplacer.UpdateViews();
 
                 if (UseBackTask)
                 {
                     doc.LastCalculate = ActiveObject;
-                    await Task.Run(() =>
+                    if (!await Task.Run(() =>
                     {
                         try
                         {
                             ActiveObject.CollectData();
                             ActiveObject.ComputeData();
+                            return true;
                         }
-                        catch (Exception ex)
+                        catch //(Exception ex)
                         {
-                            MessageBox.Show(Instances.DocumentEditor, ex.Message, "SolutionAsync Warning!");
+                            //Instances.DocumentEditor.Invoke((Action)(() =>
+                            //{
+                            //    MessageBox.Show(Instances.DocumentEditor, ex.Message + "\n" + ex.Source + "\n" + ex.StackTrace, "SolutionAsync Warning!" + ActiveObject.Name);
+                            //}));
+                            return false;
                         }
-                    });
+                    })) return false;
                 }
                 else
                 {
@@ -169,6 +174,7 @@ namespace SolutionAsync
             {
                 ActiveObject.Attributes.ExpireLayout();
             }
+            return true;
         }
     }
 }

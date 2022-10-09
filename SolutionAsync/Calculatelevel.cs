@@ -23,9 +23,9 @@ namespace SolutionAsync
         {
             _nodes.Add(node);
         }
-        internal async Task SolveOneLevel(DocumentTask doc)
+        internal async Task<bool> SolveOneLevel(DocumentTask doc)
         {
-            await Task.WhenAll(_nodes.Select(no => no.SolveOneObject(doc)).ToArray());
+            return !(await Task.WhenAll(_nodes.Select(no => no.SolveOneObject(doc)).ToArray())).Any(b => !b);
         }
         internal void ClearLevel()
         {
