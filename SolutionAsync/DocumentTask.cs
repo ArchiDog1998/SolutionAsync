@@ -218,9 +218,13 @@ namespace SolutionAsync
                 if (!await level.SolveOneLevel(this))
                 {
                     isCalculateSuccessfully = false;
-                    level.ClearLevel();
+                    level.ClearFailedLevel();
 
-                    Document.ScheduleSolution(20);
+                    Instances.DocumentEditor.Invoke((Action)(() =>
+                    {
+                        Document.NewSolution(false);
+                    }));
+
                     break;
                 }
 

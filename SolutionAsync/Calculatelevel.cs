@@ -12,6 +12,7 @@ namespace SolutionAsync
     internal class Calculatelevel
     {
         private List<GraphNode> _nodes = new List<GraphNode>();
+        private bool[] _nodeSucceed;
         public Calculatelevel()
         {
         }
@@ -25,7 +26,23 @@ namespace SolutionAsync
         }
         internal async Task<bool> SolveOneLevel(DocumentTask doc)
         {
-            return !(await Task.WhenAll(_nodes.Select(no => no.SolveOneObject(doc)).ToArray())).Any(b => !b);
+            _nodeSucceed = (await Task.WhenAll(_nodes.Select(no => no.SolveOneObject(doc)))).ToArray();
+            return !_nodeSucceed?.Any(b => !b) ?? true;
+        }
+        internal void ClearFailedLevel()
+        {
+            if (_nodeSucceed.Length != _nodes.Count)
+            {
+                ClearLevel();
+                return;
+            }
+            for (int i = 0; i < _nodeSucceed.Length; i++)
+            {
+                if (!_nodeSucceed[i])
+                {
+                    _nodes[i].ActiveObject.ExpireSolution(false);
+                }
+            }
         }
         internal void ClearLevel()
         {
@@ -53,6 +70,11 @@ namespace SolutionAsync
                 {
                     if (node.CalculateLevel == 0)
                         node.SetNextLevel();
+                }
+
+                foreach (var node in nodes.OrderByDescending(o => o.CalculateLevel))
+                {
+                    node.UpperLevel();
                 }
 
                 List<Calculatelevel> result = new List<Calculatelevel>();

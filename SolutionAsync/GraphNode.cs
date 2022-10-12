@@ -96,14 +96,21 @@ namespace SolutionAsync
             }
         }
 
+        internal void UpperLevel()
+        {
+            if (_nextNodes != null && _nextNodes.Count > 0)
+                CalculateLevel = _nextNodes.Min(n => n.CalculateLevel) - 1;
+        }
+
         internal async Task<bool> SolveOneObject(DocumentTask doc)
         {
+
             _setIndex.Invoke();
             try
             {
                 if (ActiveObject.Phase == GH_SolutionPhase.Computed)
                 {
-                    return false;
+                    return true;
                 }
 
                 SolutionAsyncLoad.ComputingObjects.Add(ActiveObject);
@@ -120,23 +127,23 @@ namespace SolutionAsync
                             ActiveObject.ComputeData();
                             return true;
                         }
-                        catch //(Exception ex)
+                        catch (InvalidOperationException ex)
                         {
-                            //Instances.DocumentEditor.Invoke((Action)(() =>
-                            //{
-                            //    MessageBox.Show(Instances.DocumentEditor, ex.Message + "\n" + ex.Source + "\n" + ex.StackTrace, "SolutionAsync Warning!" + ActiveObject.Name);
-                            //}));
+                            SolutionAsyncLoad.NoAsyncObjs.Add(ActiveObject.ComponentGuid);
+                            return false;
+                        }
+                        catch
+                        {
                             return false;
                         }
                     })) return false;
                 }
                 else
                 {
-                    bool a = (bool)Instances.ActiveCanvas.Invoke((Func<bool>)delegate
+                    Instances.ActiveCanvas.Invoke((Action)delegate
                     {
                         ActiveObject.CollectData();
                         ActiveObject.ComputeData();
-                        return true;
                     });
                 }
                 SolutionAsyncLoad.ComputingObjects.Remove(ActiveObject);
