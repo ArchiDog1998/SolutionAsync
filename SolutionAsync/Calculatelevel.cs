@@ -44,7 +44,7 @@ namespace SolutionAsync
                 }
             }
         }
-        internal void ClearLevel()
+        private void ClearLevel()
         {
             foreach (var node in _nodes)
             {

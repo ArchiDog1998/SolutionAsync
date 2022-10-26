@@ -104,7 +104,6 @@ namespace SolutionAsync
 
         internal async Task<bool> SolveOneObject(DocumentTask doc)
         {
-
             _setIndex.Invoke();
             try
             {
@@ -127,15 +126,21 @@ namespace SolutionAsync
                             ActiveObject.ComputeData();
                             return true;
                         }
-                        catch (InvalidOperationException ex)
+                        //This Active Obejct can't calculate on task.
+                        catch (InvalidOperationException)
                         {
                             SolutionAsyncLoad.NoAsyncObjs.Add(ActiveObject.ComponentGuid);
+                            SolutionAsyncLoad.SaveToJson();
                             return false;
                         }
-                        catch
+                        catch (ArgumentOutOfRangeException ex)
                         {
-                            return false;
+                            //Changed two fast.
+                            if (ex.StackTrace.Contains("GH_StructureIterator"))
+                                return false;
                         }
+                        //Error for ActiveObject
+                        return true;
                     })) return false;
                 }
                 else

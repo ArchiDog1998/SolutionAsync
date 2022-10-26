@@ -231,7 +231,7 @@ namespace SolutionAsync
                 if (aboutCalculatingCount > id)
                 {
                     isCalculateSuccessfully = false;
-                    level.ClearLevel();
+                    //level.ClearFailedLevel();
                     break;
                 }
 

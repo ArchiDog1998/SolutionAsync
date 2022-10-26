@@ -18,7 +18,7 @@ namespace SolutionAsync
 {
     public class SolutionAsyncLoad : GH_AssemblyPriority
     {
-        internal static List<Guid> NoAsyncObjs = new List<Guid>();
+        internal static List<Guid> NoAsyncObjs  = new List<Guid>();
         internal static List<IGH_ActiveObject> ComputingObjects = new List<IGH_ActiveObject>();
         private static readonly string _location = Path.Combine(Folders.SettingsFolder, "skipAsyncObjs.json");
         public static bool UseSolutionAsync
