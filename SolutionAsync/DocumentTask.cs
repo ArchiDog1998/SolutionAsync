@@ -42,7 +42,17 @@ namespace SolutionAsync
 
         #endregion
 
-        internal IGH_ActiveObject LastCalculate {private get; set; }
+        private IGH_ActiveObject _lastCalculate;
+        internal IGH_ActiveObject LastCalculate 
+        {
+            private get => _lastCalculate;
+            set
+            {
+                _lastCalculate = value;
+                LastCalculateObjects.Add(value);
+            }
+        }
+        internal List<IGH_ActiveObject> LastCalculateObjects { get; } = new List<IGH_ActiveObject>();
         public GH_Document Document { get; }
 
         private bool _ManualCancel = false;
@@ -213,6 +223,7 @@ namespace SolutionAsync
             {
                 Calculatelevel level = levels[i];
 
+                LastCalculateObjects.Clear();
                 rightCalculateingCount = id;
 
                 if (!await level.SolveOneLevel(this))
@@ -231,7 +242,7 @@ namespace SolutionAsync
                 if (aboutCalculatingCount > id)
                 {
                     isCalculateSuccessfully = false;
-                    //level.ClearFailedLevel();
+                    LastCalculateObjects.ForEach(o => o.ExpireSolution(false));
                     break;
                 }
 
