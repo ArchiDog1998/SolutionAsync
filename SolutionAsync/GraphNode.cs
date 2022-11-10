@@ -115,6 +115,8 @@ namespace SolutionAsync
                 SolutionAsyncLoad.ComputingObjects.Add(ActiveObject);
                 GH_DocumentReplacer.UpdateViews();
 
+                ActiveObject.CollectData();
+
                 if (UseBackTask)
                 {
                     doc.LastCalculate = ActiveObject;
@@ -122,7 +124,6 @@ namespace SolutionAsync
                     {
                         try
                         {
-                            ActiveObject.CollectData();
                             ActiveObject.ComputeData();
                             return true;
                         }
@@ -147,7 +148,6 @@ namespace SolutionAsync
                 {
                     Instances.ActiveCanvas.Invoke((Action)delegate
                     {
-                        ActiveObject.CollectData();
                         ActiveObject.ComputeData();
                     });
                 }

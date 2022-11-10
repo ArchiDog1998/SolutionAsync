@@ -148,11 +148,11 @@ namespace SolutionAsync
                 }
                 else
                 {
-                    DocumentTask._stateInfo.SetValue(Document, GH_ProcessStep.Process);
+                    _stateInfo.SetValue(Document, GH_ProcessStep.Process);
 
                     try
                     {
-                        DocumentTask._solveAllObjInfo.Invoke(Document, new object[] { mode });
+                        _solveAllObjInfo.Invoke(Document, new object[] { mode });
                     }
                     catch (Exception ex)
                     {
