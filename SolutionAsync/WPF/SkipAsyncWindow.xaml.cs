@@ -1,23 +1,17 @@
 ﻿using Grasshopper;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
+using SimpleGrasshopper.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace SolutionAsync.WPF
 {
@@ -29,7 +23,7 @@ namespace SolutionAsync.WPF
         private readonly GH_Canvas _canvas = Instances.ActiveCanvas;
 
 
-        private List<Guid> _preList;
+        private readonly List<Guid> _preList;
         private bool _cancel = false;
 
         private IGH_ActiveObject _targetActiveObj;
@@ -43,21 +37,21 @@ namespace SolutionAsync.WPF
         }
         public SkipAsyncWindow()
         {
-            ObservableCollection<ActiveObjItem> structureLists = new ObservableCollection<ActiveObjItem>();
-            foreach (Guid guid in SolutionAsyncLoad.NoAsyncObjs)
+            ObservableCollection<ActiveObjItem> structureLists = new ();
+            foreach (Guid guid in Data.NoAsyncObjects)
             {
                 structureLists.Add(new ActiveObjItem(guid));
             }
 
             this.DataContext = structureLists;
-            this._preList = SolutionAsyncLoad.NoAsyncObjs;
+            this._preList = Data.NoAsyncObjects;
 
             InitializeComponent();
 
-            MemoryStream ms = new MemoryStream();
-            Properties.Resources.SolutionAsyncIcon_24.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            using MemoryStream ms = new ();
+            typeof(SolutionAsyncInfo).Assembly.GetBitmap("SolutionAsyncIcon_24.png").Save(ms, System.Drawing.Imaging.ImageFormat.Png);
 
-            BitmapImage ImageIcon = new BitmapImage();
+            BitmapImage ImageIcon = new ();
             ImageIcon.BeginInit();
             ms.Seek(0, SeekOrigin.Begin);
             ImageIcon.StreamSource = ms;
@@ -214,17 +208,16 @@ namespace SolutionAsync.WPF
         {
             if (_cancel)
             {
-                SolutionAsyncLoad.NoAsyncObjs = _preList;
+                Data.NoAsyncObjects = _preList;
             }
             else
             {
-                List<Guid> ids = new List<Guid>();
+                List<Guid> ids = new ();
                 foreach (ActiveObjItem item in (ObservableCollection<ActiveObjItem>)DataContext)
                 {
                     ids.Add(item.Guid);
                 }
-                SolutionAsyncLoad.NoAsyncObjs = ids;
-                SolutionAsyncLoad.SaveToJson();
+                Data.NoAsyncObjects = ids;
             }
             base.OnClosed(e);
         }
