@@ -20,6 +20,21 @@ internal class ComponentPatch
 
         if (Data.NoAsyncObjects.Contains(__instance.ComponentGuid))
         {
+            Instances.ActiveCanvas.Invoke(delegate
+            {
+                _originalCallDocs.Add(__instance);
+                try
+                {
+                    __originalMethod.Invoke(__instance, Array.Empty<object>());
+                }
+                finally
+                {
+                    _originalCallDocs.Remove(__instance);
+                }
+            });
+        }
+        else
+        {
             return true;
             //int times = 0;
             //do
@@ -47,21 +62,6 @@ internal class ComponentPatch
             //    }
             //}
             //while(times > 0 && times < 10);
-        }
-        else
-        {
-            Instances.ActiveCanvas.Invoke(delegate
-            {
-                _originalCallDocs.Add(__instance);
-                try
-                {
-                    __originalMethod.Invoke(__instance, Array.Empty<object>());
-                }
-                finally
-                {
-                    _originalCallDocs.Remove(__instance);
-                }
-            });
         }
         return false;
     }

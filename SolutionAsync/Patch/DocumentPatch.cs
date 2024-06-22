@@ -2,8 +2,6 @@
 using Grasshopper.Kernel;
 using HarmonyLib;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace SolutionAsync.Patch;
@@ -13,11 +11,17 @@ internal class DocumentPatch
 {
     private static readonly List<GH_Document> _runningDocs = new();
     private static readonly List<GH_Document> _calculatingDocs = new();
-
+    private static bool _firstTime = true;
 
     [HarmonyPatch(nameof(GH_Document.NewSolution), typeof(bool), typeof(GH_SolutionMode))]
     static bool Prefix(GH_Document __instance, bool expireAllObjects, GH_SolutionMode mode)
     {
+        if (_firstTime)
+        {
+            _firstTime = false;
+            return false;
+        }
+
         if (!Data.UseSolutionAsync) return true;
         if (_calculatingDocs.Contains(__instance)) return true;
 
@@ -59,8 +63,7 @@ internal class DocumentPatch
         ____state = GH_ProcessStep.PostProcess;
 
         ___m_solutionIndex = -1;
-        var items = __instance.Objects.OfType<IGH_ActiveObject>();
-        foreach (var item in items)
+        foreach (var item in CalculateItem.Create(__instance))
         {
             if (GH_Document.IsEscapeKeyDown())
             {
@@ -70,8 +73,8 @@ internal class DocumentPatch
             {
                 break;
             }
-            ___m_solutionIndex = __instance.Objects.IndexOf(item);
-            item.SolveOne(mode, __instance);
+            ___m_solutionIndex = __instance.Objects.IndexOf(item.Items[0]);
+            item.Solve(mode);
         }
 
         if (__instance.AbortRequested)

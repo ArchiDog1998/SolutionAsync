@@ -4,25 +4,81 @@ using Grasshopper.Kernel;
 using HarmonyLib;
 using Microsoft.VisualBasic.CompilerServices;
 using Rhino;
+using Rhino.Render.CustomRenderMeshes;
 using Rhino.Runtime;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 using System.Windows.Forms;
 
 namespace SolutionAsync;
-
-internal static class ActiveObjectHelper
+internal class CalculateItem
 {
     internal static readonly FieldInfo _iconInfo = AccessTools.Field(typeof(GH_ObjectExceptionDialog), "_lblIcon");
-    internal static readonly FieldInfo _nameInfo = AccessTools.Field(typeof(GH_ObjectExceptionDialog),"_lblName");
-    internal static readonly FieldInfo _exceptionInfo = AccessTools.Field(typeof(GH_ObjectExceptionDialog),"_lblException");
-    internal static readonly FieldInfo _doNotShowInfo = AccessTools.Field(typeof(GH_ObjectExceptionDialog),"chkDontShow");
+    internal static readonly FieldInfo _nameInfo = AccessTools.Field(typeof(GH_ObjectExceptionDialog), "_lblName");
+    internal static readonly FieldInfo _exceptionInfo = AccessTools.Field(typeof(GH_ObjectExceptionDialog), "_lblException");
+    internal static readonly FieldInfo _doNotShowInfo = AccessTools.Field(typeof(GH_ObjectExceptionDialog), "_chkDontShow");
     internal static readonly FieldInfo _ignoreList = AccessTools.Field(typeof(GH_Document), "m_ignoreList");
 
-    internal static void SolveOne(this IGH_ActiveObject item, GH_SolutionMode mode, GH_Document doc)
+    public IGH_ActiveObject[] Items { get; }
+    public GH_Document Doc { get; }
+
+    public CalculateItem(GH_Document doc, params IGH_ActiveObject[] items)
+    {
+        Items = items;
+        Doc = doc;
+    }
+
+    public static IEnumerable<CalculateItem> Create(GH_Document doc)
+    {
+        var items = doc.Objects.OfType<IGH_ActiveObject>();
+
+        if (Data.UseSolutionOrderedLevelAsync)
+        {
+            _cache.Clear();
+            var grp = items.GroupBy(GetObjectDepth);
+            return items.GroupBy(GetObjectDepth).OrderBy(i => i.Key)
+                .Select(i => new CalculateItem(doc, i.ToArray()));
+        }
+        else
+        {
+            return items.Select(i => new CalculateItem(doc, i));
+        }
+    }
+
+    private static readonly Dictionary<IGH_ActiveObject, int> _cache = new ();
+    private static int GetObjectDepth(IGH_ActiveObject obj)
+    {
+        if (_cache.TryGetValue(obj, out var depth)) return depth;
+        var upStream = GetUpStream(obj);
+        if (upStream == null || upStream.Length == 0) return 0;
+        return _cache[obj] = upStream.Max(GetObjectDepth) + 1;
+    }
+
+    private static IGH_ActiveObject[] GetUpStream(IGH_ActiveObject obj)
+    {
+        if (obj is IGH_Param param)
+        {
+            return param.Sources.Select(s => s.Attributes.GetTopLevel.DocObject)
+                .OfType<IGH_ActiveObject>().ToHashSet().ToArray();
+        }
+        else if(obj is IGH_Component comp)
+        {
+            return comp.Params.Input.SelectMany(GetUpStream).ToHashSet().ToArray();
+        }
+        return Array.Empty<IGH_ActiveObject>();
+    }
+
+    public void Solve(GH_SolutionMode mode)
+    {
+        var tasks = Items.Select(i => Task.Run(() => SolveOne(i, mode, Doc)));
+        Task.WaitAll(tasks.ToArray());
+    }
+
+    private static void SolveOne(IGH_ActiveObject item, GH_SolutionMode mode, GH_Document doc)
     {
         try
         {

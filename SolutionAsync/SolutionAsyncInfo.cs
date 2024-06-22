@@ -3,11 +3,11 @@ using Grasshopper.GUI;
 using Grasshopper.Kernel;
 using HarmonyLib;
 using SimpleGrasshopper.Util;
+using SolutionAsync.Patch;
 using System;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
-using static System.Windows.Forms.AxHost;
 
 namespace SolutionAsync;
 
@@ -44,6 +44,7 @@ partial class SimpleAssemblyPriority
     {
         var harmony = new Harmony("Grasshopper.SolutionAsync");
         harmony.PatchAll();
+        StructureIteratorPatch.Patch(harmony);
 
         Instances.ActiveCanvas.KeyDown += ActiveCanvas_KeyDown;
 
