@@ -9,16 +9,17 @@ namespace SolutionAsync.Patch;
 [HarmonyPatch(typeof(GH_Document))]
 internal class DocumentPatch
 {
+    internal static readonly List<GH_Document> _addedDocuments = new();
+
     private static readonly List<GH_Document> _runningDocs = new();
     private static readonly List<GH_Document> _calculatingDocs = new();
-    private static bool _firstTime = true;
 
     [HarmonyPatch(nameof(GH_Document.NewSolution), typeof(bool), typeof(GH_SolutionMode))]
     static bool Prefix(GH_Document __instance, bool expireAllObjects, GH_SolutionMode mode)
     {
-        if (_firstTime)
+        if (_addedDocuments.Contains(__instance))
         {
-            _firstTime = false;
+            _addedDocuments.Remove(__instance);
             return false;
         }
 
@@ -55,8 +56,17 @@ internal class DocumentPatch
         return false;
     }
 
+    [HarmonyPatch(nameof(GH_Document.NewSolution), typeof(bool), typeof(GH_SolutionMode))]
+    static void Postfix(GH_Document __instance, ref GH_ProcessStep ____state)
+    {
+        if (__instance.AbortRequested)
+        {
+            ____state = GH_ProcessStep.Aborted;
+        }
+    }
+
     [HarmonyPatch("SolveAllObjects")]
-    static bool Prefix(GH_Document __instance, GH_SolutionMode mode, ref GH_ProcessStep ____state, ref int ___m_solutionIndex, ref bool ___m_abortRequested)
+    static bool Prefix(GH_Document __instance, GH_SolutionMode mode, ref GH_ProcessStep ____state, ref int ___m_solutionIndex)
     {
         if (!Data.UseSolutionAsync) return true;
 
@@ -67,7 +77,7 @@ internal class DocumentPatch
         {
             if (GH_Document.IsEscapeKeyDown())
             {
-                ___m_abortRequested = true;
+                __instance.RequestAbortSolution();
             }
             if (__instance.AbortRequested)
             {
@@ -76,12 +86,6 @@ internal class DocumentPatch
             ___m_solutionIndex = __instance.Objects.IndexOf(item.Items[0]);
             item.Solve(mode);
         }
-
-        if (__instance.AbortRequested)
-        {
-            ____state = GH_ProcessStep.Aborted;
-        }
-
         return false;
     }
 }

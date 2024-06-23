@@ -28,16 +28,17 @@ internal class ComponentAttributePatch
 
         string showStr = component.Phase.ToString();
 
-        if(component.Phase == GH_SolutionPhase.Computing)
+        switch (component.Phase)
         {
-            if (component.RunCount >= 0)
-            {
-                showStr += $" {component.RunCount} {(component.RunCount == 1 ? "time" : "times")}.";
-            }
-            else
-            {
-                showStr += "...";
-            }
+            case GH_SolutionPhase.Computing:
+                showStr += component.RunCount >= 0
+                    ? $" {component.RunCount} {(component.RunCount == 1 ? "time" : "times")}."
+                    : "...";
+                break;
+
+            case GH_SolutionPhase.Computed:
+                showStr += $" {component.ProcessorTime.TotalSeconds:F2}s";
+                break;
         }
 
         graphics.DrawString(showStr, GH_FontServer.StandardBold, new SolidBrush(color),

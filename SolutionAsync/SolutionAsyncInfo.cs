@@ -47,8 +47,14 @@ partial class SimpleAssemblyPriority
         StructureIteratorPatch.Patch(harmony);
 
         Instances.ActiveCanvas.KeyDown += ActiveCanvas_KeyDown;
+        Instances.DocumentServer.DocumentAdded += DocumentServer_DocumentAdded;
 
         base.DoWithEditor(editor);
+    }
+
+    private void DocumentServer_DocumentAdded(GH_DocumentServer sender, GH_Document doc)
+    {
+        DocumentPatch._addedDocuments.Add(doc);
     }
 
     private void ActiveCanvas_KeyDown(object sender, KeyEventArgs e)

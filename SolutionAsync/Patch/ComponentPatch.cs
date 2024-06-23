@@ -22,9 +22,9 @@ internal class ComponentPatch
         {
             Instances.ActiveCanvas.Invoke(delegate
             {
-                _originalCallDocs.Add(__instance);
                 try
                 {
+                    _originalCallDocs.Add(__instance);
                     __originalMethod.Invoke(__instance, Array.Empty<object>());
                 }
                 finally
