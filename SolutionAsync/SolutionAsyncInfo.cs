@@ -29,7 +29,7 @@ public class SolutionAsyncInfo : GH_AssemblyInfo
     //Return a string representing your preferred contact details.
     public override string AuthorContact => "201704110219@stu.zafu.edu.cn";
 
-    public override string Version => "1.2.0";
+    public override string Version => "1.2.1";
 }
 
 partial class SimpleAssemblyPriority
