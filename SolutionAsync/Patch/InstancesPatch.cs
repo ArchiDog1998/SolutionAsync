@@ -7,7 +7,7 @@ namespace SolutionAsync.Patch;
 internal class InstancesPatch
 {
     [HarmonyPatch(nameof(Instances.RedrawAll))]
-    static bool Prefix()
+    private static bool Prefix()
     {
         Instances.DocumentEditor.Invoke(() =>
         {

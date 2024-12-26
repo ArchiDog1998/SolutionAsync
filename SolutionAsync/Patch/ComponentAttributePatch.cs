@@ -1,8 +1,8 @@
-﻿using Grasshopper.GUI.Canvas;
+﻿using System.Drawing;
+using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using HarmonyLib;
-using System.Drawing;
 
 namespace SolutionAsync.Patch;
 
@@ -10,7 +10,8 @@ namespace SolutionAsync.Patch;
 internal class ComponentAttributePatch
 {
     [HarmonyPatch("Render")]
-    static void Postfix(GH_ComponentAttributes __instance, GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
+    private static void Postfix(GH_ComponentAttributes __instance, GH_Canvas canvas, Graphics graphics,
+        GH_CanvasChannel channel)
     {
         if (canvas.ModifiersEnabled) return;
         if (channel != GH_CanvasChannel.Overlay) return;
@@ -23,10 +24,10 @@ internal class ComponentAttributePatch
         {
             GH_SolutionPhase.Computed or GH_SolutionPhase.Computing => Color.DarkGreen,
             GH_SolutionPhase.Failed => Color.DarkRed,
-            _ => Color.DarkOrange,
+            _ => Color.DarkOrange
         };
 
-        string showStr = component.Phase.ToString();
+        var showStr = component.Phase.ToString();
 
         switch (component.Phase)
         {

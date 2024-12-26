@@ -1,44 +1,41 @@
-﻿using Grasshopper.Kernel;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Grasshopper;
+using Grasshopper.Kernel;
 
-namespace SolutionAsync.WPF
+namespace SolutionAsync.WPF;
+
+public class ActiveObjItem
 {
-    public class ActiveObjItem
+    public ActiveObjItem(Guid guid)
     {
-        public Bitmap Icon { get; } = null;
-        public string Name { get; } = "Not Found!";
-        public Guid Guid { get; }
+        Guid = guid;
 
-        public string Category { get; } = "Not Found!";
-        public string Subcategory { get; } = "Not Found!";
-        public ActiveObjItem(Guid guid)
-        {
-            this.Guid = guid;
+        var proxy = Instances.ComponentServer.EmitObjectProxy(guid);
+        if (proxy == null) return;
 
-            IGH_ObjectProxy proxy = Grasshopper.Instances.ComponentServer.EmitObjectProxy(guid);
-            if (proxy == null) return;
+        Icon = proxy.Icon;
+        Name = proxy.Desc.Name;
 
-            Icon = proxy.Icon;
-            Name = proxy.Desc.Name;
-
-            if (proxy.Desc.HasCategory) Category = proxy.Desc.Category;
-            if (proxy.Desc.HasSubCategory) Subcategory = proxy.Desc.SubCategory;
-        }
-
-        public ActiveObjItem(IGH_ActiveObject obj)
-        {
-            this.Guid = obj.ComponentGuid;
-
-            this.Icon = obj.Icon_24x24;
-            this.Name = obj.Name;
-
-            if (obj.HasCategory) Category = obj.Category;
-            if (obj.HasSubCategory) Subcategory = obj.SubCategory;
-        }
+        if (proxy.Desc.HasCategory) Category = proxy.Desc.Category;
+        if (proxy.Desc.HasSubCategory) Subcategory = proxy.Desc.SubCategory;
     }
+
+    public ActiveObjItem(IGH_ActiveObject obj)
+    {
+        Guid = obj.ComponentGuid;
+
+        Icon = obj.Icon_24x24;
+        Name = obj.Name;
+
+        if (obj.HasCategory) Category = obj.Category;
+        if (obj.HasSubCategory) Subcategory = obj.SubCategory;
+    }
+
+    public Bitmap Icon { get; }
+    public string Name { get; } = "Not Found!";
+    public Guid Guid { get; }
+
+    public string Category { get; } = "Not Found!";
+    public string Subcategory { get; } = "Not Found!";
 }

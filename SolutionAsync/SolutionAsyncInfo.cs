@@ -1,13 +1,13 @@
-﻿using Grasshopper;
+﻿using System;
+using System.Drawing;
+using System.Reflection;
+using System.Windows.Forms;
+using Grasshopper;
 using Grasshopper.GUI;
 using Grasshopper.Kernel;
 using HarmonyLib;
 using SimpleGrasshopper.Util;
 using SolutionAsync.Patch;
-using System;
-using System.Drawing;
-using System.Reflection;
-using System.Windows.Forms;
 
 namespace SolutionAsync;
 
@@ -21,7 +21,7 @@ public class SolutionAsyncInfo : GH_AssemblyInfo
     //Return a short string describing the purpose of this GHA library.
     public override string Description => "Make UI responsible during the solution.";
 
-    public override Guid Id => new ("FCC6721F-31C1-420F-8B00-E67AEE19DCF1");
+    public override Guid Id => new("FCC6721F-31C1-420F-8B00-E67AEE19DCF1");
 
     //Return a string identifying you or your company.
     public override string AuthorName => "秋水";
